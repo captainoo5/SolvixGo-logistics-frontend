@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
+import logoImg from '../assets/logo.png';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -8,6 +9,7 @@ const AdminDashboard = () => {
   
   // --- Active Tab State ---
   const [activeTab, setActiveTab] = useState('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [toast, setToast] = useState({ text: '', type: '' }); // 'success' | 'error' | 'warning'
 
   // --- CRUD Loading States ---
@@ -40,13 +42,8 @@ const AdminDashboard = () => {
       const res = await API.get('/services');
       if (res.data.success) setServices(res.data.data);
     } catch (err) {
-      console.log('Using mock fallbacks for services.');
-      setServices([
-        { _id: '1', name: 'Pickup & Delivery', description: 'Fast delivery inside Gombe metropolis.', badge: 'Popular', isActive: true, displayOrder: 1 },
-        { _id: '2', name: 'Buy & Deliver', description: 'Groceries and food shopping courier support.', badge: '', isActive: true, displayOrder: 2 },
-        { _id: '3', name: 'Business Delivery', description: 'Tailored vendor solutions for merchants.', badge: '', isActive: true, displayOrder: 3 },
-        { _id: '4', name: 'Express Delivery', description: 'High priority urgent logistics in 45 mins.', badge: 'NEW', isActive: true, displayOrder: 4 }
-      ]);
+      console.log('Error loading services.', err);
+      setServices([]);
     }
 
     // Fetch Partners
@@ -54,13 +51,8 @@ const AdminDashboard = () => {
       const res = await API.get('/partners');
       if (res.data.success) setPartners(res.data.data);
     } catch (err) {
-      console.log('Using mock fallbacks for partners.');
-      setPartners([
-        { _id: '1', name: 'HealthPlus Pharmacy', website: 'https://healthplus.ng', isActive: true },
-        { _id: '2', name: 'Mama Cass Foods', website: '', isActive: true },
-        { _id: '3', name: 'Gombe Mart', website: '', isActive: true },
-        { _id: '4', name: 'Swift Supplies Ltd', website: '', isActive: false }
-      ]);
+      console.log('Error loading partners.', err);
+      setPartners([]);
     }
 
     // Fetch Testimonials
@@ -68,12 +60,8 @@ const AdminDashboard = () => {
       const res = await API.get('/testimonials');
       if (res.data.success) setTestimonials(res.data.data);
     } catch (err) {
-      console.log('Using mock fallbacks for testimonials.');
-      setTestimonials([
-        { _id: '1', customerName: 'Aisha Abdullahi', location: 'Tudun Wada, Gombe', rating: 5, review: 'Solvix Go has completely changed how I run my fashion business.', isApproved: true },
-        { _id: '2', customerName: 'Emmanuel Danladi', location: 'Ajiya, Gombe', rating: 5, review: 'Best delivery service in Gombe State! High precision timing.', isApproved: true },
-        { _id: '3', customerName: 'Musa Ibrahim', location: 'Jekadafari, Gombe', rating: 4, review: 'Very reliable and prompt restaurant deliveries every day.', isApproved: false }
-      ]);
+      console.log('Error loading testimonials.', err);
+      setTestimonials([]);
     }
 
     // Fetch Blog Posts
@@ -81,11 +69,8 @@ const AdminDashboard = () => {
       const res = await API.get('/posts');
       if (res.data.success) setPosts(res.data.data);
     } catch (err) {
-      console.log('Using mock fallbacks for blog posts.');
-      setPosts([
-        { _id: 'post-1', title: 'Why Solvix Go is Gombe’s Premium Logistics Partner', category: 'Company News', isPublished: true, slug: 'solvix-go-gombe-premium-logistics-partner', createdAt: '2026-05-10T12:00:00Z', body: '<p>At Solvix Go, our mission is to transform logistics...</p>', tags: ['Logistics', 'Gombe'] },
-        { _id: 'post-2', title: '5 Delivery Tips to Keep Your E-Commerce Customers Happy', category: 'Delivery Tips', isPublished: true, slug: '5-delivery-tips-ecommerce-customers-happy', createdAt: '2026-05-15T09:30:00Z', body: '<p>In the competitive digital commerce environment...</p>', tags: ['E-Commerce', 'Shipping'] }
-      ]);
+      console.log('Error loading blog posts.', err);
+      setPosts([]);
     }
 
     // Fetch Contact Messages
@@ -93,11 +78,8 @@ const AdminDashboard = () => {
       const res = await API.get('/contact');
       if (res.data.success) setContacts(res.data.data);
     } catch (err) {
-      console.log('Using mock fallbacks for contacts.');
-      setContacts([
-        { _id: '1', fullName: 'Bello Yerima', phone: '08031234567', email: 'bello@gmail.com', subject: 'Corporate Partner Request', message: 'I want to integrate Solvix Go deliveries for our 12 pharmacy retail sub-outlets inside Gombe Metropolis.', status: 'New', createdAt: '2026-05-20T10:00:00Z' },
-        { _id: '2', fullName: 'Fatima Audu', phone: '09077665544', email: 'fatima@yahoo.com', subject: 'Vendor Pricing Inquiry', message: 'What are your monthly subscription packages for boutique shops making 15+ deliveries daily?', status: 'In Progress', createdAt: '2026-05-21T08:30:00Z' }
-      ]);
+      console.log('Error loading contacts.', err);
+      setContacts([]);
     }
 
     setLoading(false);
@@ -106,6 +88,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchAllData();
   }, []);
+
+  const selectTab = (tab) => {
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
+  };
 
   // --- Auth Handler ---
   const handleLogout = () => {
@@ -981,6 +968,49 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* ── MOBILE TOP HEADER ── */}
+      <div className="mobile-admin-header" style={{
+        display: 'none',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        background: 'var(--navy)',
+        color: '#fff',
+        padding: '0.75rem 1.5rem',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '60px',
+        zIndex: 1000,
+        boxShadow: '0 2px 10px rgba(0,0,0,0.15)'
+      }}>
+        <img src={logoImg} alt="Solvix Go Logo" style={{ height: '32px', objectFit: 'contain' }} />
+        <button onClick={() => setIsSidebarOpen(prev => !prev)} style={{
+          background: 'transparent',
+          border: 'none',
+          color: '#fff',
+          fontSize: '1.5rem',
+          cursor: 'pointer',
+          padding: '0.25rem 0.5rem'
+        }}>
+          ☰
+        </button>
+      </div>
+
+      {/* Sidebar Backdrop Overlay on Mobile */}
+      {isSidebarOpen && (
+        <div 
+          onClick={() => setIsSidebarOpen(false)} 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 1000,
+            display: 'block'
+          }}
+        />
+      )}
+
       {/* ── SIDEBAR NAVIGATION ── */}
       <aside style={{
         width: '260px',
@@ -990,12 +1020,12 @@ const AdminDashboard = () => {
         flexDirection: 'column',
         padding: '2rem 1rem',
         flexShrink: 0
-      }} className="sidebar">
+      }} className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         
         {/* Sidebar Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h2 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>Solvix<span style={{ color: 'var(--orange)' }}>Go</span></h2>
-          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em', display: 'block', marginTop: '0.25rem' }}>Admin Control Hub</span>
+          <img src={logoImg} alt="Solvix Go Logo" style={{ height: '42px', objectFit: 'contain', marginBottom: '0.5rem' }} />
+          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em', display: 'block' }}>Admin Control Hub</span>
         </div>
 
         {/* User Card */}
@@ -1011,37 +1041,37 @@ const AdminDashboard = () => {
 
         {/* Sidebar Nav Links */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
-          <button onClick={() => setActiveTab('overview')} style={{
+          <button onClick={() => selectTab('overview')} style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
             background: activeTab === 'overview' ? 'var(--orange)' : 'transparent',
             color: '#fff'
           }}>📊 Overview</button>
 
-          <button onClick={() => setActiveTab('services')} style={{
+          <button onClick={() => selectTab('services')} style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
             background: activeTab === 'services' ? 'var(--orange)' : 'transparent',
             color: '#fff'
           }}>📦 Services Fleet</button>
 
-          <button onClick={() => setActiveTab('partners')} style={{
+          <button onClick={() => selectTab('partners')} style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
             background: activeTab === 'partners' ? 'var(--orange)' : 'transparent',
             color: '#fff'
           }}>🤝 Retail Partners</button>
 
-          <button onClick={() => setActiveTab('testimonials')} style={{
+          <button onClick={() => selectTab('testimonials')} style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
             background: activeTab === 'testimonials' ? 'var(--orange)' : 'transparent',
             color: '#fff'
           }}>⭐ Testimonials</button>
 
-          <button onClick={() => setActiveTab('posts')} style={{
+          <button onClick={() => selectTab('posts')} style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
             background: activeTab === 'posts' ? 'var(--orange)' : 'transparent',
             color: '#fff'
           }}>📝 Blog Articles</button>
 
-          <button onClick={() => setActiveTab('contacts')} style={{
+          <button onClick={() => selectTab('contacts')} style={{
             display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
             background: activeTab === 'contacts' ? 'var(--orange)' : 'transparent',
             color: '#fff'
@@ -1058,7 +1088,7 @@ const AdminDashboard = () => {
       </aside>
 
       {/* ── MAIN WORKSPACE CONTENT ── */}
-      <main style={{ flexGrow: 1, padding: '2.5rem', overflowY: 'auto' }}>
+      <main className="main-content" style={{ flexGrow: 1, padding: '2.5rem', overflowY: 'auto' }}>
         
         {/* Dashboard Title Header */}
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -1235,8 +1265,26 @@ const AdminDashboard = () => {
           to { opacity: 1; transform: translateY(0); }
         }
         @media (max-width: 768px) {
+          .mobile-admin-header {
+            display: flex !important;
+          }
           .sidebar {
-            display: none !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            z-index: 1001 !important;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out !important;
+            display: flex !important;
+          }
+          .sidebar.open {
+            transform: translateX(0) !important;
+          }
+          .main-content {
+            padding-top: 5rem !important; /* Make room for mobile header */
+            padding-left: 1.25rem !important;
+            padding-right: 1.25rem !important;
           }
           .overview-split {
             grid-template-columns: 1fr !important;

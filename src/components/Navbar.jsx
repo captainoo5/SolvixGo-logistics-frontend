@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -36,8 +37,8 @@ const Navbar = () => {
     <>
       <nav id="navbar" className={scrolled ? 'scrolled' : ''}>
         <div className="nav-inner">
-          <Link to="/" className="nav-logo" onClick={() => window.scrollTo(0, 0)}>
-            Solvix<span>Go</span>
+          <Link to="/" className="nav-logo" onClick={() => window.scrollTo(0, 0)} style={{ display: 'flex', alignItems: 'center' }}>
+            <img src={logoImg} alt="Solvix Go" style={{ height: '40px', objectFit: 'contain' }} />
           </Link>
           
           <ul className="nav-links">
@@ -125,7 +126,7 @@ const Navbar = () => {
             </li>
             <li>
               <a 
-                href="https://wa.me/2347079018011?text=Hello%20Solvix%20Go%2C%20I%20want%20to%20place%20an%20order!" 
+                href="https://wa.me/2348128830983?text=Hello%20Solvix%20Go%2C%20I%20want%20to%20place%20an%20order!" 
                 className="btn btn-orange btn-nav-order" 
                 target="_blank" 
                 rel="noreferrer"
@@ -157,7 +158,7 @@ const Navbar = () => {
         </a>
         <Link to="/#contact" onClick={(e) => handleLinkClick(e, '#contact')}>Contact</Link>
         <a 
-          href="https://wa.me/2347079018011?text=Hello%20Solvix%20Go%2C%20I%20want%20to%20place%20an%20order!" 
+          href="https://wa.me/2348128830983?text=Hello%20Solvix%20Go%2C%20I%20want%20to%20place%20an%20order!" 
           target="_blank" 
           rel="noreferrer" 
           style={{ color: 'var(--orange)', fontWeight: 700 }}

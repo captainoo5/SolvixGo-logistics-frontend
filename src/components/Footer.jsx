@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import logoImg from '../assets/logo.png';
 
 const Footer = () => {
   return (
@@ -7,7 +8,9 @@ const Footer = () => {
       <div className="footer-main">
         {/* Brand Information */}
         <div>
-          <div className="footer-logo">Solvix<span>Go</span></div>
+          <div className="footer-logo" style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <img src={logoImg} alt="Solvix Go" style={{ height: '36px', objectFit: 'contain' }} />
+          </div>
           <div className="footer-tagline">We Pick. We Move. We Deliver.</div>
           <p className="footer-desc">
             Solvix Go is Gombe's premier logistics and home delivery service. We cater to businesses, individuals, pharmacy runs, and merchants.

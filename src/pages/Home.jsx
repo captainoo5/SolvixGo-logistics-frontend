@@ -2,37 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import API from '../services/api';
 import StarRating from '../components/StarRating';
+import fastDeliveryImg from '../assets/fast-delivery.png';
+import dependableImg from '../assets/dependable.png';
+import shieldImg from '../assets/shield.png';
+import trustImg from '../assets/trust.png';
 
 const Home = () => {
   // --- Services State ---
-  const [services, setServices] = useState([
-    { _id: '1', name: 'Pickup & Delivery', description: 'We pick up and deliver your packages to any location within Gombe Metropolis. Fast, safe, and reliable same-day delivery.', badge: 'Popular' },
-    { _id: '2', name: 'Buy & Deliver', description: 'Tell us what you need to buy (groceries, food, pharmaceuticals) and we will buy and deliver it straight to your doorstep.', badge: '' },
-    { _id: '3', name: 'Business Delivery', description: 'Dedicated logistics solutions for vendors, social media sellers, local shops, and e-commerce brands in Gombe.', badge: '' },
-    { _id: '4', name: 'Express Delivery', description: 'Need urgent dispatch? Our express delivery guarantees priority pickup and drop-off within Gombe Metropolis under 45 minutes.', badge: 'NEW' },
-    { _id: '5', name: 'Subscription Plan', description: 'Customized weekly or monthly discount delivery packages for high-volume merchants, vendors, and corporate partners.', badge: 'Hot' },
-    { _id: '6', name: 'Business Marketing', description: 'Professional social media management, brand development, and digital marketing integrations tailored to your business growth.', badge: '' },
-    { _id: '7', name: 'Business Consulting', description: 'Operational audit and consultation support for businesses looking to optimize supply chains and logistics metrics.', badge: '' }
-  ]);
+  const [services, setServices] = useState([]);
 
   // --- Partners State ---
-  const [partners, setPartners] = useState([
-    { _id: '1', name: 'HealthPlus Pharmacy' },
-    { _id: '2', name: 'Mama Cass Foods' },
-    { _id: '3', name: 'Gombe Mart' },
-    { _id: '4', name: 'Swift Supplies Ltd' },
-    { _id: '5', name: 'Fashion Hub NG' },
-    { _id: '6', name: 'Savanna Grill' },
-    { _id: '7', name: 'MedExpress Clinic' },
-    { _id: '8', name: 'TechZone Gombe' }
-  ]);
+  const [partners, setPartners] = useState([]);
 
   // --- Testimonials State ---
-  const [testimonials, setTestimonials] = useState([
-    { _id: '1', customerName: 'Aisha Abdullahi', location: 'Tudun Wada, Gombe', rating: 5, review: 'Solvix Go has completely changed how I run my fashion business. The delivery is always on time and the riders are extremely professional. I order at least 3 times a week!' },
-    { _id: '2', customerName: 'Emmanuel Danladi', location: 'Ajiya, Gombe', rating: 5, review: 'Best delivery service in Gombe! They picked up my urgent pharmacy orders and delivered same day. The Buy & Deliver service is an absolute lifesaver.' },
-    { _id: '3', customerName: 'Musa Ibrahim', location: 'Jekadafari, Gombe', rating: 5, review: 'Very reliable and fast. I use them for my restaurant deliveries every day. They never disappoint, and the pricing is very reasonable for the quality of service.' }
-  ]);
+  const [testimonials, setTestimonials] = useState([]);
 
   // --- Testimonials Slider State ---
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -157,7 +140,7 @@ const Home = () => {
             </p>
             <div className="hero-ctas">
               <a 
-                href="https://wa.me/2347079018011?text=Hello%20Solvix%20Go%2C%20I%20need%20a%20delivery%20service!" 
+                href="https://wa.me/2348128830983?text=Hello%20Solvix%20Go%2C%20I%20need%20a%20delivery%20service!" 
                 className="btn btn-orange" 
                 target="_blank" 
                 rel="noreferrer"
@@ -168,19 +151,19 @@ const Home = () => {
             </div>
             <div className="hero-stats">
               <div className="stat-card">
-                <div className="stat-icon">⚡</div>
+                <div className="stat-icon"><img src={fastDeliveryImg} alt="Fast" style={{ width: '32px', height: '32px', objectFit: 'contain' }} /></div>
                 <div className="stat-label">Fast</div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon">✅</div>
+                <div className="stat-icon"><img src={dependableImg} alt="Reliable" style={{ width: '32px', height: '32px', objectFit: 'contain' }} /></div>
                 <div className="stat-label">Reliable</div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon">🛡️</div>
+                <div className="stat-icon"><img src={shieldImg} alt="Safe" style={{ width: '32px', height: '32px', objectFit: 'contain' }} /></div>
                 <div className="stat-label">Safe</div>
               </div>
               <div className="stat-card">
-                <div className="stat-icon">⭐</div>
+                <div className="stat-icon"><img src={trustImg} alt="Trusted" style={{ width: '32px', height: '32px', objectFit: 'contain' }} /></div>
                 <div className="stat-label">Trusted</div>
               </div>
             </div>
@@ -388,28 +371,28 @@ const Home = () => {
               </div>
               <div className="values-grid">
                 <div className="value-box">
-                  <div className="value-icon">⚡</div>
+                  <div className="value-icon"><img src={fastDeliveryImg} alt="Fast" style={{ width: '28px', height: '28px', objectFit: 'contain' }} /></div>
                   <div>
                     <div className="value-name">Fast</div>
                     <div className="value-desc">Swift same-day dispatches across Metropolis</div>
                   </div>
                 </div>
                 <div className="value-box">
-                  <div className="value-icon">✅</div>
+                  <div className="value-icon"><img src={dependableImg} alt="Reliable" style={{ width: '28px', height: '28px', objectFit: 'contain' }} /></div>
                   <div>
                     <div className="value-name">Reliable</div>
                     <div className="value-desc">Prompt and guaranteed handling records</div>
                   </div>
                 </div>
                 <div className="value-box">
-                  <div className="value-icon">🛡️</div>
+                  <div className="value-icon"><img src={shieldImg} alt="Safe" style={{ width: '28px', height: '28px', objectFit: 'contain' }} /></div>
                   <div>
                     <div className="value-name">Safe</div>
                     <div className="value-desc">Secured package transport practices</div>
                   </div>
                 </div>
                 <div className="value-box">
-                  <div className="value-icon">⭐</div>
+                  <div className="value-icon"><img src={trustImg} alt="Trusted" style={{ width: '28px', height: '28px', objectFit: 'contain' }} /></div>
                   <div>
                     <div className="value-name">Trusted</div>
                     <div className="value-desc">First choice of merchants in Gombe</div>
@@ -417,7 +400,7 @@ const Home = () => {
                 </div>
               </div>
               <a 
-                href="https://wa.me/2347079018011" 
+                href="https://wa.me/2348128830983" 
                 className="btn btn-orange" 
                 style={{ marginTop: '0.5rem' }}
                 target="_blank"
@@ -596,7 +579,7 @@ const Home = () => {
                 </div>
               </div>
               <a 
-                href="https://wa.me/2347079018011?text=Hello%20Solvix%20Go%2C%20I%20want%20to%20book%20a%20delivery!" 
+                href="https://wa.me/2348128830983?text=Hello%20Solvix%20Go%2C%20I%20want%20to%20book%20a%20delivery!" 
                 className="whatsapp-btn" 
                 target="_blank" 
                 rel="noreferrer"

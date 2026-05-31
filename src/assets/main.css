@@ -133,6 +133,7 @@ a {
 .nav-logo span {
   background: var(--orange-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 900;
 }
@@ -293,6 +294,7 @@ section {
 .section-title span {
   background: var(--orange-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -401,6 +403,7 @@ section {
 .hero-title .highlight {
   background: var(--orange-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -453,6 +456,9 @@ section {
 .stat-icon {
   font-size: 1.6rem;
   margin-bottom: 0.35rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .stat-label {
@@ -712,6 +718,7 @@ section {
 .about-exp-badge span {
   background: var(--orange-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   font-size: 1.8rem;
   font-weight: 900;
@@ -1330,6 +1337,7 @@ footer {
 .footer-logo span {
   background: var(--orange-gradient);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
