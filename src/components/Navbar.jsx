@@ -105,15 +105,13 @@ const Navbar = () => {
               </Link>
             </li>
             <li>
-              <a 
-                href="#" 
-                className="disabled" 
-                title="Coming Soon" 
-                onClick={(e) => e.preventDefault()}
-                style={{ color: 'rgba(255,255,255,0.4)', cursor: 'not-allowed' }}
+              <Link 
+                to="/#track" 
+                onClick={(e) => handleLinkClick(e, '#track')}
+                className={isActive('#track') ? 'active' : ''}
               >
                 Track Parcel
-              </a>
+              </Link>
             </li>
             <li>
               <Link 
@@ -153,9 +151,7 @@ const Navbar = () => {
         <Link to="/#testimonials" onClick={(e) => handleLinkClick(e, '#testimonials')}>Testimonials</Link>
         <Link to="/#partners" onClick={(e) => handleLinkClick(e, '#partners')}>Partners</Link>
         <Link to="/blog" onClick={() => setMenuOpen(false)}>Blog</Link>
-        <a href="#" onClick={(e) => e.preventDefault()} style={{ color: 'rgba(255,255,255,0.35)', cursor: 'not-allowed' }}>
-          Track Parcel (Coming Soon)
-        </a>
+        <Link to="/#track" onClick={(e) => handleLinkClick(e, '#track')}>Track Parcel</Link>
         <Link to="/#contact" onClick={(e) => handleLinkClick(e, '#contact')}>Contact</Link>
         <a 
           href="https://wa.me/2348128830983?text=Hello%20Solvix%20Go%2C%20I%20want%20to%20place%20an%20order!" 

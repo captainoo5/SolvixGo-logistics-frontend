@@ -10,7 +10,13 @@ const API = axios.create({
 // Attach JWT Authorization token if present in localStorage
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('solvix_token');
+    let token;
+    if (window.location.pathname.startsWith('/rider')) {
+      token = localStorage.getItem('rider_token') || localStorage.getItem('solvix_token');
+    } else {
+      token = localStorage.getItem('solvix_token') || localStorage.getItem('rider_token');
+    }
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,10 +34,17 @@ API.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('solvix_token');
       localStorage.removeItem('solvix_admin');
+      localStorage.removeItem('rider_token');
+      localStorage.removeItem('rider_info');
       
       // Auto-redirect if in the admin panel and not already on the login page
       if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
         window.location.href = '/admin/login';
+      }
+      
+      // Auto-redirect if in the rider portal and not already on the login page
+      if (window.location.pathname.startsWith('/rider') && window.location.pathname !== '/rider/login') {
+        window.location.href = '/rider/login';
       }
     }
     return Promise.reject(error);

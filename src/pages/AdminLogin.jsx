@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const { isInstallable, triggerInstall } = usePWAInstall();
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +23,7 @@ const AdminLogin = () => {
       if (response.data.success) {
         localStorage.setItem('solvix_token', response.data.token);
         localStorage.setItem('solvix_admin', response.data.admin.name);
+        localStorage.setItem('solvix_admin_role', response.data.admin.role);
         
         // Success redirect
         navigate('/admin');
@@ -95,6 +98,33 @@ const AdminLogin = () => {
             Administrator Access Panel
           </p>
         </div>
+
+        {isInstallable && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <button
+              onClick={triggerInstall}
+              type="button"
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                borderRadius: '12px',
+                border: '1px solid var(--orange)',
+                background: 'rgba(244,123,0,0.1)',
+                color: 'var(--orange)',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                transition: 'var(--transition)'
+              }}
+            >
+              📱 Install Admin App on Device
+            </button>
+          </div>
+        )}
 
         {/* Form Error Message */}
         {errorMsg && (

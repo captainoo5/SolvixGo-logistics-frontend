@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -8,16 +8,36 @@ import BlogDetail from './pages/BlogDetail';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Import New Pages
+import RiderLogin from './pages/rider/RiderLogin';
+import RiderDashboard from './pages/rider/RiderDashboard';
+import RiderOrderDetail from './pages/rider/RiderOrderDetail';
+import Orders from './pages/admin/Orders';
+import Riders from './pages/admin/Riders';
+import Billing from './pages/admin/Billing';
+import BillingDetail from './pages/admin/BillingDetail';
+
 import './assets/main.css';
+
+// Rider Protected Route wrapper
+const RiderProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('rider_token');
+  if (!token) {
+    return <Navigate to="/rider/login" replace />;
+  }
+  return children;
+};
 
 const AppContent = () => {
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  // Exclude public nav & footer from admin and rider views
+  const isSpecialPortal = location.pathname.startsWith('/admin') || location.pathname.startsWith('/rider');
 
   return (
     <div className="app-shell" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Public Sticky Navigation - Excluded from Administrator Panels */}
-      {!isAdminRoute && <Navbar />}
+      {/* Public Sticky Navigation - Excluded from Administrator and Rider Panels */}
+      {!isSpecialPortal && <Navbar />}
 
       {/* Main Page Content Router */}
       <main style={{ flexGrow: 1 }}>
@@ -26,6 +46,25 @@ const AppContent = () => {
           <Route path="/" element={<Home />} />
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/:slug" element={<BlogDetail />} />
+
+          {/* Secure Rider Portal */}
+          <Route path="/rider/login" element={<RiderLogin />} />
+          <Route 
+            path="/rider/dashboard" 
+            element={
+              <RiderProtectedRoute>
+                <RiderDashboard />
+              </RiderProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/rider/orders/:id" 
+            element={
+              <RiderProtectedRoute>
+                <RiderOrderDetail />
+              </RiderProtectedRoute>
+            } 
+          />
 
           {/* Secure Admin Portal */}
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -37,11 +76,43 @@ const AppContent = () => {
               </ProtectedRoute>
             } 
           />
+          <Route 
+            path="/admin/orders" 
+            element={
+              <ProtectedRoute>
+                <Orders />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/riders" 
+            element={
+              <ProtectedRoute>
+                <Riders />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/billing" 
+            element={
+              <ProtectedRoute>
+                <Billing />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/billing/:id" 
+            element={
+              <ProtectedRoute>
+                <BillingDetail />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </main>
 
-      {/* Public Footer Navigation - Excluded from Administrator Panels */}
-      {!isAdminRoute && <Footer />}
+      {/* Public Footer Navigation - Excluded from Administrator and Rider Panels */}
+      {!isSpecialPortal && <Footer />}
     </div>
   );
 };

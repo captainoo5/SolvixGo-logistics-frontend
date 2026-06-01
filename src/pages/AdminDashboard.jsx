@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../services/api';
+import AdminSidebar from '../components/AdminSidebar';
 import logoImg from '../assets/logo.png';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const adminName = localStorage.getItem('solvix_admin') || 'Super Admin';
   
   // --- Active Tab State ---
-  const [activeTab, setActiveTab] = useState('overview');
+  const query = new URLSearchParams(location.search);
+  const activeTab = query.get('tab') || 'overview';
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [toast, setToast] = useState({ text: '', type: '' }); // 'success' | 'error' | 'warning'
 
@@ -90,7 +93,7 @@ const AdminDashboard = () => {
   }, []);
 
   const selectTab = (tab) => {
-    setActiveTab(tab);
+    navigate(`/admin?tab=${tab}`);
     setIsSidebarOpen(false);
   };
 
@@ -589,7 +592,7 @@ const AdminDashboard = () => {
                   {posts.filter(p => !p.isPublished).map(p => (
                     <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--navy)' }}>{p.title.slice(0, 35)}...</span>
-                      <button onClick={() => setActiveTab('posts')} style={{ background: 'none', border: 'none', color: 'var(--orange)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>Edit</button>
+                      <button onClick={() => navigate('/admin?tab=posts')} style={{ background: 'none', border: 'none', color: 'var(--orange)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer' }}>Edit</button>
                     </div>
                   ))}
                 </div>
@@ -1012,80 +1015,7 @@ const AdminDashboard = () => {
       )}
 
       {/* ── SIDEBAR NAVIGATION ── */}
-      <aside style={{
-        width: '260px',
-        background: 'var(--navy)',
-        color: '#fff',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '2rem 1rem',
-        flexShrink: 0
-      }} className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        
-        {/* Sidebar Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <img src={logoImg} alt="Solvix Go Logo" style={{ height: '42px', objectFit: 'contain', marginBottom: '0.5rem' }} />
-          <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.1em', display: 'block' }}>Admin Control Hub</span>
-        </div>
-
-        {/* User Card */}
-        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '0.8rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-          <div style={{ width: '36px', height: '36px', background: 'var(--orange)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem' }}>
-            {adminName.slice(0,1).toUpperCase()}
-          </div>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{adminName}</div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem', fontWeight: 600 }}>SuperAdmin</div>
-          </div>
-        </div>
-
-        {/* Sidebar Nav Links */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
-          <button onClick={() => selectTab('overview')} style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
-            background: activeTab === 'overview' ? 'var(--orange)' : 'transparent',
-            color: '#fff'
-          }}>📊 Overview</button>
-
-          <button onClick={() => selectTab('services')} style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
-            background: activeTab === 'services' ? 'var(--orange)' : 'transparent',
-            color: '#fff'
-          }}>📦 Services Fleet</button>
-
-          <button onClick={() => selectTab('partners')} style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
-            background: activeTab === 'partners' ? 'var(--orange)' : 'transparent',
-            color: '#fff'
-          }}>🤝 Retail Partners</button>
-
-          <button onClick={() => selectTab('testimonials')} style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
-            background: activeTab === 'testimonials' ? 'var(--orange)' : 'transparent',
-            color: '#fff'
-          }}>⭐ Testimonials</button>
-
-          <button onClick={() => selectTab('posts')} style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
-            background: activeTab === 'posts' ? 'var(--orange)' : 'transparent',
-            color: '#fff'
-          }}>📝 Blog Articles</button>
-
-          <button onClick={() => selectTab('contacts')} style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
-            background: activeTab === 'contacts' ? 'var(--orange)' : 'transparent',
-            color: '#fff'
-          }}>✉️ Contact Orders</button>
-        </nav>
-
-        {/* Sidebar Footer Logout */}
-        <button onClick={handleLogout} style={{
-          display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%', padding: '0.8rem 1.25rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 700, fontSize: '0.85rem', textAlign: 'left', transition: 'var(--transition)',
-          background: 'rgba(239, 68, 68, 0.1)',
-          color: '#F87171'
-        }}>🚪 Sign Out</button>
-
-      </aside>
+      <AdminSidebar activeTab={activeTab} isMobileOpen={isSidebarOpen} setMobileOpen={setIsSidebarOpen} />
 
       {/* ── MAIN WORKSPACE CONTENT ── */}
       <main className="main-content" style={{ flexGrow: 1, padding: '2.5rem', overflowY: 'auto' }}>

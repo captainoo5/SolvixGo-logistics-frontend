@@ -25,6 +25,32 @@ const Home = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState({ text: '', type: '' }); // type: 'success' | 'error'
 
+  // --- Tracking State ---
+  const [trackingId, setTrackingId] = useState('');
+  const [trackingResult, setTrackingResult] = useState(null);
+  const [trackLoading, setTrackLoading] = useState(false);
+  const [trackError, setTrackError] = useState('');
+
+  const handleTrackSubmit = async (e) => {
+    e.preventDefault();
+    if (!trackingId.trim()) return;
+    setTrackLoading(true);
+    setTrackError('');
+    setTrackingResult(null);
+
+    try {
+      const res = await API.get(`/track/${trackingId.trim()}`);
+      if (res.data.success) {
+        setTrackingResult(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      setTrackError(err.response?.data?.message || 'Tracking ID not found. Please verify the ID and try again.');
+    } finally {
+      setTrackLoading(false);
+    }
+  };
+
   // --- Fetch API Data ---
   useEffect(() => {
     // Fetch Services
@@ -500,38 +526,165 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ── TRACK YOUR PARCEL (DISABLED) ── */}
+      {/* ── TRACK YOUR PARCEL ── */}
       <section id="track">
         <div className="section-inner">
           <div className="section-header">
             <span className="section-tag">Tracking Portal</span>
             <h2 className="section-title">TRACK YOUR <span>PARCEL</span></h2>
           </div>
-          <div className="track-inner">
-            <div className="coming-soon-overlay">🔒 Coming Soon</div>
-            <div className="track-box track-disabled">
+          <div className="track-inner" style={{ position: 'relative' }}>
+            <div className="track-box">
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📍</div>
               <h3 style={{ color: 'var(--navy)', fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.5rem' }}>
                 Track Your Delivery
               </h3>
               <p style={{ color: 'var(--gray-text)', fontSize: '0.875rem' }}>
-                Enter your Order ID to get real-time delivery status updates.
+                Enter your Tracking ID to get real-time delivery status updates.
               </p>
-              <div className="track-input-row">
+              
+              <form onSubmit={handleTrackSubmit} className="track-input-row" style={{ display: 'flex', gap: '0.5rem', width: '100%', marginTop: '1rem' }}>
                 <input 
                   className="track-input" 
                   type="text" 
-                  placeholder="Enter Order ID e.g. SGO-12345" 
-                  disabled 
+                  placeholder="Enter Tracking ID e.g. GMB-0601-001-AA" 
+                  value={trackingId}
+                  onChange={(e) => setTrackingId(e.target.value)}
+                  style={{ flexGrow: 1, padding: '0.75rem 1rem', borderRadius: '10px', border: '1.5px solid #CBD5E1', outline: 'none' }}
                 />
-                <button className="track-btn" disabled>Track Order</button>
-              </div>
-              <p className="track-note">
-                ⏳ Parcel tracking will be available soon. Contact us directly for active delivery logs.
+                <button 
+                  type="submit" 
+                  className="track-btn" 
+                  disabled={trackLoading}
+                  style={{ background: 'var(--orange)', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {trackLoading ? 'Searching...' : 'Track Order'}
+                </button>
+              </form>
+
+              {trackError && (
+                <div style={{ color: '#E53E3E', fontSize: '0.85rem', marginTop: '1rem', fontWeight: 600 }}>
+                  ⚠️ {trackError}
+                </div>
+              )}
+
+              {/* Render Tracking Result Timeline */}
+              {trackingResult && (
+                <div style={{
+                  marginTop: '2rem',
+                  background: '#f8fafc',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  width: '100%',
+                  textAlign: 'left',
+                  border: '1px solid #EDF2F7'
+                }}>
+                  <div style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '0.75rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ color: 'var(--navy)', margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>
+                        📦 Parcel Found: <span style={{ color: 'var(--orange)' }}>{trackingResult.trackingId}</span>
+                      </h4>
+                      <p style={{ margin: '0.2rem 0 0 0', color: 'var(--gray-text)', fontSize: '0.75rem' }}>
+                        Item: {trackingResult.itemDescription}
+                      </p>
+                    </div>
+                    {trackingResult.riderName && (
+                      <div style={{ background: '#E8F5E9', borderRadius: '6px', padding: '0.3rem 0.5rem', fontSize: '0.72rem', color: '#2E7D32', fontWeight: 700 }}>
+                        🚴 Rider: {trackingResult.riderName}
+                      </div>
+                    )}
+                  </div>
+
+                  {trackingResult.status === 'Cancelled' ? (
+                    <div style={{ background: '#FFEBEE', border: '1px solid #FFCDD2', color: '#C62828', borderRadius: '10px', padding: '0.8rem', fontWeight: 700, fontSize: '0.85rem', textAlign: 'center' }}>
+                      ⚠️ This delivery request has been Cancelled.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'relative', paddingLeft: '1.25rem' }}>
+                      <div style={{
+                        position: 'absolute',
+                        left: '5px',
+                        top: '10px',
+                        bottom: '10px',
+                        width: '2px',
+                        background: '#E2E8F0',
+                        zIndex: 0
+                      }} />
+
+                      {[
+                        { key: 'Pending', label: 'Order Received' },
+                        { key: 'Assigned', label: 'Rider Assigned' },
+                        { key: 'Picked Up', label: 'Picked Up' },
+                        { key: 'In Transit', label: 'In Transit' },
+                        { key: 'Delivered', label: 'Delivered' }
+                      ].map((step, idx) => {
+                        const historyItem = trackingResult.statusHistory.find(h => h.status === step.key);
+                        const stepTime = historyItem ? new Date(historyItem.timestamp).toLocaleString() : null;
+                        const isCompleted = stepTime !== null;
+                        const isCurrent = step.key === trackingResult.status;
+                        
+                        let dotColor = '#CBD5E1';
+                        let dotBg = '#fff';
+                        let isPulsing = false;
+
+                        if (isCurrent) {
+                          dotColor = 'var(--orange)';
+                          dotBg = 'var(--orange)';
+                          isPulsing = true;
+                        } else if (isCompleted) {
+                          dotColor = '#10B981';
+                          dotBg = '#10B981';
+                        }
+
+                        return (
+                          <div key={step.key} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', position: 'relative', zIndex: 1 }}>
+                            <div 
+                              className={isPulsing ? 'pulse-orange-dot' : ''}
+                              style={{
+                                width: '10px',
+                                height: '10px',
+                                borderRadius: '50%',
+                                background: dotBg,
+                                border: `2px solid ${dotColor}`,
+                                marginLeft: '-1.5rem',
+                                marginTop: '4px',
+                                transition: 'all 0.3s ease'
+                              }} 
+                            />
+
+                            <div>
+                              <div style={{ fontWeight: 700, color: isCurrent ? 'var(--orange)' : 'var(--navy)', fontSize: '0.85rem' }}>
+                                {step.label} {isCurrent && ' (Current Status)'}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--gray-text)', marginTop: '0.1rem' }}>
+                                {isCompleted ? `✓ At: ${stepTime}` : 'Pending'}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <p className="track-note" style={{ marginTop: '1.5rem' }}>
+                ⏳ Check your WhatsApp for direct status updates once your package goes In Transit.
               </p>
             </div>
           </div>
         </div>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes pulse-orange-anim {
+            0% { box-shadow: 0 0 0 0 rgba(244,123,0,0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(244,123,0,0); }
+            100% { box-shadow: 0 0 0 0 rgba(244,123,0,0); }
+          }
+          .pulse-orange-dot {
+            animation: pulse-orange-anim 1.5s infinite !important;
+            box-shadow: 0 0 8px rgba(244,123,0,0.5);
+          }
+        `}} />
       </section>
 
       {/* ── CONTACT US SECTION ── */}
