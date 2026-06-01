@@ -5,12 +5,11 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import BlogList from './pages/BlogList';
 import BlogDetail from './pages/BlogDetail';
-import AdminLogin from './pages/AdminLogin';
+import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Import New Pages
-import RiderLogin from './pages/rider/RiderLogin';
 import RiderDashboard from './pages/rider/RiderDashboard';
 import RiderOrderDetail from './pages/rider/RiderOrderDetail';
 import Orders from './pages/admin/Orders';
@@ -24,15 +23,15 @@ import './assets/main.css';
 const RiderProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('rider_token');
   if (!token) {
-    return <Navigate to="/rider/login" replace />;
+    return <Navigate to="/login" replace />;
   }
   return children;
 };
 
 const AppContent = () => {
   const location = useLocation();
-  // Exclude public nav & footer from admin and rider views
-  const isSpecialPortal = location.pathname.startsWith('/admin') || location.pathname.startsWith('/rider');
+  // Exclude public nav & footer from admin, rider, and login views
+  const isSpecialPortal = location.pathname.startsWith('/admin') || location.pathname.startsWith('/rider') || location.pathname === '/login';
 
   return (
     <div className="app-shell" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -48,7 +47,6 @@ const AppContent = () => {
           <Route path="/blog/:slug" element={<BlogDetail />} />
 
           {/* Secure Rider Portal */}
-          <Route path="/rider/login" element={<RiderLogin />} />
           <Route 
             path="/rider/dashboard" 
             element={
@@ -67,7 +65,7 @@ const AppContent = () => {
           />
 
           {/* Secure Admin Portal */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/login" element={<Login />} />
           <Route 
             path="/admin" 
             element={

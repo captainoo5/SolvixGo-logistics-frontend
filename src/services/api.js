@@ -34,17 +34,13 @@ API.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('solvix_token');
       localStorage.removeItem('solvix_admin');
+      localStorage.removeItem('solvix_admin_role');
       localStorage.removeItem('rider_token');
       localStorage.removeItem('rider_info');
       
-      // Auto-redirect if in the admin panel and not already on the login page
-      if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
-        window.location.href = '/admin/login';
-      }
-      
-      // Auto-redirect if in the rider portal and not already on the login page
-      if (window.location.pathname.startsWith('/rider') && window.location.pathname !== '/rider/login') {
-        window.location.href = '/rider/login';
+      // Auto-redirect if in a protected portal and not already on the login page
+      if ((window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/rider')) && window.location.pathname !== '/login') {
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);

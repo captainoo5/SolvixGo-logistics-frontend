@@ -32,7 +32,7 @@ const Footer = () => {
             <li><Link to="/#about">About Us</Link></li>
             <li><Link to="/blog">Blog News</Link></li>
             <li><Link to="/#contact">Contact</Link></li>
-            <li><Link to="/admin/login" style={{ fontSize: '0.78rem', opacity: 0.6 }}>Admin Portal</Link></li>
+            <li><Link to="/login" style={{ fontSize: '0.78rem', opacity: 0.6 }}>Staff Portal</Link></li>
           </ul>
         </div>
 
