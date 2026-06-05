@@ -12,6 +12,16 @@ const RiderDashboard = () => {
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ text: '', type: '' });
+
+  // --- Expenses State ---
+  const [expenses, setExpenses] = useState([]);
+  const [expenseStats, setExpenseStats] = useState({ totalRevenue: 0, totalExpenses: 0, totalFuelExpenses: 0, netProfit: 0 });
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    amount: '',
+    category: 'Fuel',
+    description: ''
+  });
   
   // --- Modals State ---
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -22,7 +32,7 @@ const RiderDashboard = () => {
     pickupAddress: '',
     dropoffAddress: '',
     itemDescription: '',
-    distanceZone: 'Short',
+    distanceZone: '500',
     paymentMethod: 'Cash',
     partner: '',
     notes: ''
@@ -57,9 +67,21 @@ const RiderDashboard = () => {
         setActiveOrders(active);
         setCompletedOrders(completed);
       }
+
+      // Fetch expenses list
+      const expRes = await API.get('/expenses');
+      if (expRes.data.success) {
+        setExpenses(expRes.data.data);
+      }
+
+      // Fetch expenses stats
+      const statsRes = await API.get('/expenses/stats');
+      if (statsRes.data.success) {
+        setExpenseStats(statsRes.data.data);
+      }
     } catch (err) {
       console.error(err);
-      showToast('Error loading orders', 'error');
+      showToast('Error loading orders & expenses', 'error');
     } finally {
       setLoading(false);
     }
@@ -122,7 +144,7 @@ const RiderDashboard = () => {
           pickupAddress: '',
           dropoffAddress: '',
           itemDescription: '',
-          distanceZone: 'Short',
+          distanceZone: '500',
           paymentMethod: 'Cash',
           partner: '',
           notes: ''
@@ -132,6 +154,41 @@ const RiderDashboard = () => {
     } catch (err) {
       console.error(err);
       showToast(err.response?.data?.message || 'Error creating order', 'error');
+    }
+  };
+
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        amount: Number(expenseForm.amount),
+        category: expenseForm.category,
+        description: expenseForm.description
+      };
+      const res = await API.post('/expenses', payload);
+      if (res.data.success) {
+        showToast('Expense recorded successfully!');
+        setIsExpenseModalOpen(false);
+        setExpenseForm({ amount: '', category: 'Fuel', description: '' });
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error recording expense', 'error');
+    }
+  };
+
+  const handleDeleteExpense = async (id) => {
+    if (!window.confirm('Delete this expense record?')) return;
+    try {
+      const res = await API.delete(`/expenses/${id}`);
+      if (res.data.success) {
+        showToast('Expense record deleted');
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error deleting expense', 'error');
     }
   };
 
@@ -353,6 +410,116 @@ const RiderDashboard = () => {
             ))}
           </div>
         )}
+
+        {/* Section: Expenses & Profit Tracker */}
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 800, marginTop: '2.5rem', marginBottom: '0.75rem', color: 'var(--orange-light)', borderLeft: '4px solid var(--orange)', paddingLeft: '0.5rem' }}>
+          Expenses & Profit Tracker
+        </h2>
+
+        {/* Profit Stats Card */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0e1738 0%, #080d24 100%)',
+          borderRadius: '16px',
+          padding: '1.25rem',
+          border: '1px solid rgba(255,255,255,0.06)',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: '0.75rem',
+          textAlign: 'center',
+          marginBottom: '1.5rem'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>Gross Revenue</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10b981', marginTop: '0.25rem' }}>₦{expenseStats.totalRevenue.toLocaleString()}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>Expenses</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f87171', marginTop: '0.25rem' }}>₦{expenseStats.totalExpenses.toLocaleString()}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>Net Profit</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--orange-light)', marginTop: '0.25rem' }}>₦{expenseStats.netProfit.toLocaleString()}</div>
+          </div>
+        </div>
+
+        {/* Add Expense Trigger */}
+        <button 
+          onClick={() => setIsExpenseModalOpen(true)}
+          style={{
+            width: '100%',
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px dashed #f59e0b',
+            borderRadius: '12px',
+            padding: '0.75rem',
+            color: '#f59e0b',
+            fontSize: '0.85rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            marginBottom: '1.5rem',
+            transition: '0.2s'
+          }}
+        >
+          ⛽ Record Expense (Fuel, Food, etc.)
+        </button>
+
+        {/* Expenses List */}
+        {expenses.length === 0 ? (
+          <div style={{
+            background: '#0b1129',
+            borderRadius: '16px',
+            padding: '1.5rem',
+            textAlign: 'center',
+            color: 'rgba(255,255,255,0.3)',
+            fontSize: '0.8rem',
+            border: '1px solid rgba(255,255,255,0.03)'
+          }}>
+            No expenses recorded yet.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {expenses.map(e => (
+              <div 
+                key={e._id}
+                style={{
+                  background: '#0e1738',
+                  borderRadius: '14px',
+                  padding: '1rem',
+                  border: '1px solid rgba(255,255,255,0.03)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                    {e.category} {e.description ? ` - ${e.description}` : ''}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>
+                    {new Date(e.date).toLocaleDateString()}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f87171' }}>
+                    -₦{e.amount}
+                  </div>
+                  <button 
+                    onClick={() => handleDeleteExpense(e._id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'rgba(239, 68, 68, 0.6)',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
 
       {/* --- CREATE ORDER MODAL --- */}
@@ -415,11 +582,15 @@ const RiderDashboard = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Distance Zone *</label>
-                    <select value={createForm.distanceZone} onChange={(e) => setCreateForm({...createForm, distanceZone: e.target.value})} style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0e1738', color: '#fff', fontSize: '0.85rem' }}>
-                      <option value="Short">Short (₦500)</option>
-                      <option value="Medium">Medium (₦700)</option>
-                      <option value="Long">Long (₦1,000)</option>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Delivery Price / Zone *</label>
+                    <select value={createForm.distanceZone} onChange={(e) => setCreateForm({...createForm, distanceZone: e.target.value})} style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0e1738', color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <option value="500">₦500</option>
+                      <option value="600">₦600</option>
+                      <option value="700">₦700</option>
+                      <option value="800">₦800</option>
+                      <option value="900">₦900</option>
+                      <option value="1000">₦1,000</option>
+                      <option value="1500">₦1,500</option>
                     </select>
                   </div>
                   <div>
@@ -454,6 +625,78 @@ const RiderDashboard = () => {
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setIsCreateModalOpen(false)} style={{ background: '#273469', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" style={{ background: 'var(--orange)', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Create Booking</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- RECORD EXPENSE MODAL --- */}
+      {isExpenseModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#0e1738',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '400px',
+            padding: '1.5rem',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+          }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--orange-light)' }}>Record Expense</h3>
+            
+            <form onSubmit={handleExpenseSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.85rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Amount (₦) *</label>
+                  <input 
+                    type="number" 
+                    required 
+                    min="1"
+                    value={expenseForm.amount} 
+                    onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})} 
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.85rem' }} 
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Category *</label>
+                  <select 
+                    value={expenseForm.category} 
+                    onChange={(e) => setExpenseForm({...expenseForm, category: e.target.value})} 
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: '#0e1738', color: '#fff', fontSize: '0.85rem' }}
+                  >
+                    <option value="Fuel">⛽ Fuel / Petrol</option>
+                    <option value="Maintenance">🛠️ Bike Maintenance</option>
+                    <option value="Food">🍔 Rider feeding</option>
+                    <option value="Other">❓ Other cost</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Description / Notes</label>
+                  <input 
+                    type="text" 
+                    value={expenseForm.description} 
+                    onChange={(e) => setExpenseForm({...expenseForm, description: e.target.value})} 
+                    placeholder="e.g. Fuel purchase at Total" 
+                    style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.85rem' }} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setIsExpenseModalOpen(false)} style={{ background: '#273469', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" style={{ background: 'var(--orange)', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Save Expense</button>
               </div>
             </form>
           </div>

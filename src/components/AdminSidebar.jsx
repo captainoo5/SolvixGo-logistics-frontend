@@ -58,7 +58,7 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
             position: 'fixed',
             inset: 0,
             background: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
+            zIndex: 10000,
             display: 'block'
           }}
         />
@@ -75,7 +75,7 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
           padding: '2rem 1rem',
           flexShrink: 0,
           transition: 'transform 0.3s ease',
-          zIndex: 1001
+          zIndex: 10001
         }} 
         className={`sidebar ${isMobileOpen ? 'open' : ''}`}
       >
@@ -110,9 +110,17 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
           </Link>
           
           {adminRole === 'superadmin' && (
-            <Link to="/admin/riders" style={getLinkStyle('/admin/riders')} onClick={() => setMobileOpen(false)}>
-              👤 Dispatch Riders
-            </Link>
+            <>
+              <Link to="/admin/riders" style={getLinkStyle('/admin/riders')} onClick={() => setMobileOpen(false)}>
+                👤 Dispatch Riders
+              </Link>
+              <Link to="/admin?tab=managers" style={getLinkStyle('/admin', 'managers')} onClick={() => setMobileOpen(false)}>
+                🛡️ Manage Admins
+              </Link>
+              <Link to="/admin?tab=history" style={getLinkStyle('/admin', 'history')} onClick={() => setMobileOpen(false)}>
+                📈 Performance History
+              </Link>
+            </>
           )}
 
           <Link to="/admin/billing" style={getLinkStyle('/admin/billing')} onClick={() => setMobileOpen(false)}>

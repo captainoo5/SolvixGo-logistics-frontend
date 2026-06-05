@@ -30,7 +30,7 @@ const Orders = () => {
     pickupAddress: '',
     dropoffAddress: '',
     itemDescription: '',
-    distanceZone: 'Short',
+    distanceZone: '500',
     paymentMethod: 'Cash',
     partner: '',
     notes: ''
@@ -40,6 +40,12 @@ const Orders = () => {
     isOpen: false,
     orderId: null,
     riderId: ''
+  });
+
+  const [priceModal, setPriceModal] = useState({
+    isOpen: false,
+    orderId: null,
+    basePrice: ''
   });
 
   const showToast = (text, type = 'success') => {
@@ -130,7 +136,7 @@ const Orders = () => {
           pickupAddress: '',
           dropoffAddress: '',
           itemDescription: '',
-          distanceZone: 'Short',
+          distanceZone: '500',
           paymentMethod: 'Cash',
           partner: '',
           notes: ''
@@ -157,6 +163,23 @@ const Orders = () => {
     } catch (err) {
       console.error(err);
       showToast(err.response?.data?.message || 'Error assigning rider', 'error');
+    }
+  };
+
+  const handleUpdatePriceSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await API.patch(`/orders/${priceModal.orderId}/update-price`, {
+        basePrice: Number(priceModal.basePrice)
+      });
+      if (res.data.success) {
+        showToast('Delivery price updated successfully!');
+        setPriceModal({ isOpen: false, orderId: null, basePrice: '' });
+        fetchOrders();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error updating delivery price', 'error');
     }
   };
 
@@ -421,6 +444,14 @@ const Orders = () => {
                               Cancel
                             </button>
                           )}
+                          {!['Delivered', 'Cancelled'].includes(o.status) && (
+                            <button 
+                              onClick={() => setPriceModal({ isOpen: true, orderId: o._id, basePrice: o.basePrice })}
+                              style={{ background: '#FEF3C7', color: '#D97706', border: 'none', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              Update Price
+                            </button>
+                          )}
                           {localStorage.getItem('solvix_admin_role') === 'superadmin' && (
                             <button 
                               onClick={() => handleDeleteOrder(o._id)}
@@ -499,11 +530,15 @@ const Orders = () => {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Distance Zone *</label>
-                    <select value={createForm.distanceZone} onChange={(e) => setCreateForm({...createForm, distanceZone: e.target.value})} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1' }}>
-                      <option value="Short">Short Zone (₦500)</option>
-                      <option value="Medium">Medium Zone (₦700)</option>
-                      <option value="Long">Long Zone (₦1,000)</option>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Delivery Price / Zone *</label>
+                    <select value={createForm.distanceZone} onChange={(e) => setCreateForm({...createForm, distanceZone: e.target.value})} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontWeight: 600 }}>
+                      <option value="500">₦500</option>
+                      <option value="600">₦600</option>
+                      <option value="700">₦700</option>
+                      <option value="800">₦800</option>
+                      <option value="900">₦900</option>
+                      <option value="1000">₦1,000</option>
+                      <option value="1500">₦1,500</option>
                     </select>
                   </div>
                   <div>
@@ -585,6 +620,50 @@ const Orders = () => {
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setAssignModal({ isOpen: false, orderId: null, riderId: '' })} style={{ background: '#F1F5F9', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Confirm Assignment</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- UPDATE PRICE MODAL --- */}
+      {priceModal.isOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem'
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '400px',
+            padding: '2rem',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+          }}>
+            <h3 style={{ color: 'var(--navy)', fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem' }}>Update Delivery Price</h3>
+            
+            <form onSubmit={handleUpdatePriceSubmit}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Delivery Base Price (₦) *</label>
+                <input 
+                  type="number" 
+                  required 
+                  min="0"
+                  value={priceModal.basePrice} 
+                  onChange={(e) => setPriceModal({...priceModal, basePrice: e.target.value})} 
+                  style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1' }} 
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setPriceModal({ isOpen: false, orderId: null, basePrice: '' })} style={{ background: '#F1F5F9', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Update Price</button>
               </div>
             </form>
           </div>

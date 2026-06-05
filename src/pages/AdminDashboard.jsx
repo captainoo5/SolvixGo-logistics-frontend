@@ -24,6 +24,18 @@ const AdminDashboard = () => {
   const [testimonials, setTestimonials] = useState([]);
   const [posts, setPosts] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [revenueStats, setRevenueStats] = useState({ totalRevenue: 0, totalExpenses: 0, totalFuelExpenses: 0, netProfit: 0 });
+  
+  // --- Admin/Manager Management States ---
+  const [admins, setAdmins] = useState([]);
+  const [adminModal, setAdminModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', email: '', password: '', role: 'admin' });
+
+  // --- Performance Tracking States ---
+  const [ridersList, setRidersList] = useState([]);
+  const [historyType, setHistoryType] = useState('rider'); // 'rider' | 'admin'
+  const [historySelectedId, setHistorySelectedId] = useState('');
+  const [historyRange, setHistoryRange] = useState('weekly'); // 'weekly' | 'monthly'
+  const [historyData, setHistoryData] = useState([]);
 
   // --- Modal Form States ---
   const [serviceModal, setServiceModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', description: '', badge: '', displayOrder: 0, isActive: true, iconFile: null });
@@ -83,6 +95,31 @@ const AdminDashboard = () => {
     } catch (err) {
       console.log('Error loading contacts.', err);
       setContacts([]);
+    }
+
+    // Fetch Revenue / Expenses Stats
+    try {
+      const res = await API.get('/expenses/stats');
+      if (res.data.success) setRevenueStats(res.data.data);
+    } catch (err) {
+      console.log('Error loading revenue stats.', err);
+    }
+
+    // Fetch Superadmin data (admins and riders list)
+    if (localStorage.getItem('solvix_admin_role') === 'superadmin') {
+      try {
+        const res = await API.get('/auth/admins');
+        if (res.data.success) setAdmins(res.data.data);
+      } catch (err) {
+        console.log('Error loading admins list.', err);
+      }
+
+      try {
+        const res = await API.get('/riders');
+        if (res.data.success) setRidersList(res.data.data);
+      } catch (err) {
+        console.log('Error loading riders list.', err);
+      }
     }
 
     setLoading(false);
@@ -502,6 +539,130 @@ const AdminDashboard = () => {
 
 
   // ==========================================
+  // --- ADMIN/MANAGER CRUD HANDLERS ---
+  // ==========================================
+  const handleOpenAdminModal = (a = null) => {
+    if (a) {
+      setAdminModal({
+        isOpen: true,
+        isEdit: true,
+        id: a._id,
+        name: a.name,
+        email: a.email,
+        password: '',
+        role: a.role || 'admin'
+      });
+    } else {
+      setAdminModal({
+        isOpen: true,
+        isEdit: false,
+        id: null,
+        name: '',
+        email: '',
+        password: '',
+        role: 'admin'
+      });
+    }
+  };
+
+  const handleAdminSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      name: adminModal.name,
+      email: adminModal.email,
+      role: adminModal.role
+    };
+    if (adminModal.password) {
+      payload.password = adminModal.password;
+    } else if (!adminModal.isEdit) {
+      showToast('Password is required for new admins', 'error');
+      return;
+    }
+
+    try {
+      let res;
+      if (adminModal.isEdit) {
+        res = await API.put(`/auth/admins/${adminModal.id}`, payload);
+      } else {
+        res = await API.post('/auth/register-admin', { ...payload, password: adminModal.password });
+      }
+
+      if (res.data.success) {
+        showToast(adminModal.isEdit ? 'Admin profile updated successfully!' : 'Admin registered successfully!');
+        setAdminModal(prev => ({ ...prev, isOpen: false }));
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error processing admin request', 'error');
+    }
+  };
+
+  const handleToggleAdminActive = async (a) => {
+    try {
+      const res = await API.put(`/auth/admins/${a._id}`, { isActive: !a.isActive });
+      if (res.data.success) {
+        showToast('Admin status toggled successfully.');
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error toggling admin status', 'error');
+    }
+  };
+
+  const handleDeleteAdmin = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this admin account? This cannot be undone.')) return;
+    try {
+      const res = await API.delete(`/auth/admins/${id}`);
+      if (res.data.success) {
+        showToast('Admin deleted successfully.');
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error deleting admin', 'error');
+    }
+  };
+
+  // ==========================================
+  // --- PERFORMANCE HISTORY HANDLERS ---
+  // ==========================================
+  const fetchHistoryStats = async () => {
+    if (!historySelectedId) return;
+    try {
+      const res = await API.get('/orders/stats/history', {
+        params: {
+          type: historyType,
+          id: historySelectedId,
+          range: historyRange
+        }
+      });
+      if (res.data.success) {
+        setHistoryData(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error loading performance history stats', 'error');
+    }
+  };
+
+  useEffect(() => {
+    if (historySelectedId) {
+      fetchHistoryStats();
+    } else {
+      setHistoryData([]);
+    }
+  }, [historyType, historySelectedId, historyRange]);
+
+  // Reset selected ID when type changes
+  useEffect(() => {
+    setHistorySelectedId('');
+    setHistoryData([]);
+  }, [historyType]);
+
+
+  // ==========================================
   // --- RENDERING SUB-PANELS ---
   // ==========================================
 
@@ -511,9 +672,36 @@ const AdminDashboard = () => {
     const activePartners = partners.filter(p => p.isActive).length;
     const approvedReviews = testimonials.filter(t => t.isApproved).length;
     const newInquiries = contacts.filter(c => c.status === 'New').length;
+    const isSuperadmin = localStorage.getItem('solvix_admin_role') === 'superadmin';
 
     return (
       <div>
+        {/* Superadmin Financial Metrics Row */}
+        {isSuperadmin && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+            <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #10B981' }}>
+              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>💰</span>
+              <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Generated Revenue</div>
+              <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>₦{revenueStats.totalRevenue.toLocaleString()}</div>
+              <p style={{ color: 'var(--gray-text)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>Delivered orders total billing</p>
+            </div>
+
+            <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #EF4444' }}>
+              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>⛽</span>
+              <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Fuel Costs (Expenses)</div>
+              <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>₦{revenueStats.totalFuelExpenses.toLocaleString()}</div>
+              <p style={{ color: 'var(--gray-text)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>Total rider fuel expenditures</p>
+            </div>
+
+            <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #2563EB' }}>
+              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>📈</span>
+              <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Net Profit (Revenue - Fuel)</div>
+              <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>₦{revenueStats.netProfit.toLocaleString()}</div>
+              <p style={{ color: 'var(--gray-text)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>Profits after daily cost removal</p>
+            </div>
+          </div>
+        )}
+
         {/* Metric Summary Cards Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
           
@@ -945,6 +1133,194 @@ const AdminDashboard = () => {
     );
   };
 
+  // --- Render 7: Manage Admins Subpanel ---
+  const renderManagers = () => {
+    return (
+      <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 style={{ color: 'var(--navy)', fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>System Administrators / Managers</h3>
+          <button 
+            onClick={() => handleOpenAdminModal(null)} 
+            className="btn btn-orange"
+            style={{ padding: '0.5rem 1.25rem', borderRadius: '8px', fontWeight: 700 }}
+          >
+            🛡️ Add New Admin
+          </button>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #EDF2F7', color: 'var(--navy)', fontWeight: 700 }}>
+                <th style={{ padding: '1rem' }}>Name</th>
+                <th style={{ padding: '1rem' }}>Email Address</th>
+                <th style={{ padding: '1rem' }}>Role</th>
+                <th style={{ padding: '1rem' }}>Status</th>
+                <th style={{ padding: '1rem' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {admins.map(a => (
+                <tr key={a._id} style={{ borderBottom: '1px solid #EDF2F7', verticalAlign: 'middle' }}>
+                  <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--navy)' }}>{a.name}</td>
+                  <td style={{ padding: '1rem' }}>{a.email}</td>
+                  <td style={{ padding: '1rem' }}>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '50px',
+                      background: a.role === 'superadmin' ? '#FEE2E2' : '#DBEAFE',
+                      color: a.role === 'superadmin' ? '#991B1B' : '#1E40AF'
+                    }}>{a.role}</span>
+                  </td>
+                  <td style={{ padding: '1rem' }}>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '50px',
+                      background: a.isActive ? '#D1FAE5' : '#F1F5F9',
+                      color: a.isActive ? '#065F46' : '#64748B'
+                    }}>{a.isActive ? 'Active' : 'Inactive'}</span>
+                  </td>
+                  <td style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => handleOpenAdminModal(a)} style={{ background: '#EFF6FF', border: 'none', color: '#1E40AF', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
+                      {a._id !== localStorage.getItem('solvix_admin_id') && (
+                        <button onClick={() => handleDeleteAdmin(a._id)} style={{ background: '#FEF2F2', border: 'none', color: '#991B1B', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Render 8: Performance Tracking Subpanel ---
+  const renderHistory = () => {
+    return (
+      <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+        <h3 style={{ color: 'var(--navy)', fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.5rem' }}>Performance History Tracking</h3>
+        
+        {/* Selection / Controls Bar */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem', background: '#F8FAFC', padding: '1.25rem', borderRadius: '12px', border: '1px solid #EDF2F7' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Select Type</label>
+            <select 
+              value={historyType} 
+              onChange={(e) => setHistoryType(e.target.value)} 
+              style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontWeight: 600 }}
+            >
+              <option value="rider">🏍️ Dispatch Rider</option>
+              <option value="admin">🛡️ Admin / Superadmin (Created Orders)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Select Name</label>
+            <select 
+              value={historySelectedId} 
+              onChange={(e) => setHistorySelectedId(e.target.value)} 
+              style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontWeight: 600 }}
+            >
+              <option value="">-- Choose Name --</option>
+              {historyType === 'rider' ? (
+                ridersList.map(r => (
+                  <option key={r._id} value={r._id}>{r.name} ({r.riderCode})</option>
+                ))
+              ) : (
+                admins.map(a => (
+                  <option key={a._id} value={a._id}>{a.name} ({a.role})</option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Select Time Range</label>
+            <div style={{ display: 'flex', gap: '0.5rem', background: '#fff', padding: '0.2rem', borderRadius: '8px', border: '1.5px solid #CBD5E1' }}>
+              <button 
+                type="button" 
+                onClick={() => setHistoryRange('weekly')} 
+                style={{ flex: 1, border: 'none', background: historyRange === 'weekly' ? 'var(--orange)' : 'transparent', color: historyRange === 'weekly' ? '#fff' : 'var(--navy)', padding: '0.45rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem' }}
+              >
+                Weekly (7 Days)
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setHistoryRange('monthly')} 
+                style={{ flex: 1, border: 'none', background: historyRange === 'monthly' ? 'var(--orange)' : 'transparent', color: historyRange === 'monthly' ? '#fff' : 'var(--navy)', padding: '0.45rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem' }}
+              >
+                Monthly (30 Days)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Results */}
+        {!historySelectedId ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--gray-text)', fontWeight: 600 }}>
+            🔍 Select a rider or admin name above to populate history tracking charts and records.
+          </div>
+        ) : historyData.length === 0 ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--gray-text)', fontWeight: 600 }}>
+            No completed deliveries or records found for the selected timeframe.
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '1.25rem', border: '1px solid #EDF2F7', textAlign: 'center' }}>
+                <div style={{ color: 'var(--gray-text)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Total Completed Deliveries</div>
+                <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>
+                  {historyData.reduce((sum, day) => sum + day.completedOrders, 0)}
+                </div>
+              </div>
+              <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '1.25rem', border: '1px solid #EDF2F7', textAlign: 'center' }}>
+                <div style={{ color: 'var(--gray-text)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Total Revenue Generated</div>
+                <div style={{ color: '#10B981', fontSize: '2rem', fontWeight: 800 }}>
+                  ₦{historyData.reduce((sum, day) => sum + day.revenue, 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            <h4 style={{ color: 'var(--navy)', fontSize: '0.95rem', fontWeight: 800, marginBottom: '1rem' }}>Daily Tracking Breakdown</h4>
+            <div style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto', border: '1px solid #EDF2F7', borderRadius: '12px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #EDF2F7', color: 'var(--navy)', fontWeight: 700, position: 'sticky', top: 0 }}>
+                    <th style={{ padding: '0.75rem 1rem' }}>Date</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Completed Orders</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Revenue Generated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...historyData].reverse().map(day => (
+                    <tr key={day.date} style={{ borderBottom: '1px solid #EDF2F7', background: day.completedOrders > 0 ? '#F0FDF4' : 'transparent' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>
+                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: 'var(--navy)' }}>
+                        {day.completedOrders} orders
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: day.revenue > 0 ? '#10B981' : 'var(--gray-text)' }}>
+                        ₦{day.revenue.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F4F6F9' }}>
       
@@ -1000,20 +1376,6 @@ const AdminDashboard = () => {
         </button>
       </div>
 
-      {/* Sidebar Backdrop Overlay on Mobile */}
-      {isSidebarOpen && (
-        <div 
-          onClick={() => setIsSidebarOpen(false)} 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
-            display: 'block'
-          }}
-        />
-      )}
-
       {/* ── SIDEBAR NAVIGATION ── */}
       <AdminSidebar activeTab={activeTab} isMobileOpen={isSidebarOpen} setMobileOpen={setIsSidebarOpen} />
 
@@ -1040,6 +1402,8 @@ const AdminDashboard = () => {
         {activeTab === 'testimonials' && renderTestimonials()}
         {activeTab === 'posts' && renderPosts()}
         {activeTab === 'contacts' && renderContacts()}
+        {activeTab === 'managers' && renderManagers()}
+        {activeTab === 'history' && renderHistory()}
 
       </main>
 
@@ -1188,37 +1552,52 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* 4. Admin register/edit Form Modal */}
+      {adminModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '450px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ color: 'var(--navy)', fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem' }}>
+              {adminModal.isEdit ? 'Edit System Manager Details' : 'Register New Manager (Admin)'}
+            </h3>
+            
+            <form onSubmit={handleAdminSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Full Name *</label>
+                <input type="text" required value={adminModal.name} onChange={(e) => setAdminModal(p => ({ ...p, name: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Email Address *</label>
+                <input type="email" required value={adminModal.email} onChange={(e) => setAdminModal(p => ({ ...p, email: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Password {adminModal.isEdit ? '(leave blank to keep current)' : '*'}</label>
+                <input type="password" required={!adminModal.isEdit} value={adminModal.password} onChange={(e) => setAdminModal(p => ({ ...p, password: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Access Role</label>
+                <select value={adminModal.role} onChange={(e) => setAdminModal(p => ({ ...p, role: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)', cursor: 'pointer', fontWeight: 600 }}>
+                  <option value="admin">Admin Manager</option>
+                  <option value="superadmin">Super Administrator</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setAdminModal(p => ({ ...p, isOpen: false }))} style={{ background: '#F1F5F9', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Admin</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Global Dashboard Layout Styles */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes slideIn {
           from { opacity: 0; transform: translateY(-20px); }
           to { opacity: 1; transform: translateY(0); }
-        }
-        @media (max-width: 768px) {
-          .mobile-admin-header {
-            display: flex !important;
-          }
-          .sidebar {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            bottom: 0 !important;
-            z-index: 1001 !important;
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out !important;
-            display: flex !important;
-          }
-          .sidebar.open {
-            transform: translateX(0) !important;
-          }
-          .main-content {
-            padding-top: 5rem !important; /* Make room for mobile header */
-            padding-left: 1.25rem !important;
-            padding-right: 1.25rem !important;
-          }
-          .overview-split {
-            grid-template-columns: 1fr !important;
-          }
         }
         .metric-card {
           transition: transform 0.2s ease;
