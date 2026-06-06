@@ -30,6 +30,10 @@ const AdminDashboard = () => {
   const [admins, setAdmins] = useState([]);
   const [adminModal, setAdminModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', email: '', password: '', role: 'admin' });
 
+  // --- Member Management States ---
+  const [members, setMembers] = useState([]);
+  const [memberModal, setMemberModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', role: '', hobby: '', history: '', isActive: true, imageFile: null });
+
   // --- Performance Tracking States ---
   const [ridersList, setRidersList] = useState([]);
   const [historyType, setHistoryType] = useState('rider'); // 'rider' | 'admin'
@@ -119,6 +123,13 @@ const AdminDashboard = () => {
         if (res.data.success) setRidersList(res.data.data);
       } catch (err) {
         console.log('Error loading riders list.', err);
+      }
+
+      try {
+        const res = await API.get('/members');
+        if (res.data.success) setMembers(res.data.data);
+      } catch (err) {
+        console.log('Error loading members list.', err);
       }
     }
 
@@ -624,6 +635,100 @@ const AdminDashboard = () => {
       showToast(err.response?.data?.message || 'Error deleting admin', 'error');
     }
   };
+
+  // ==========================================
+  // --- MEMBER (STAFF) CRUD HANDLERS ---
+  // ==========================================
+  const handleOpenMemberModal = (m = null) => {
+    if (m) {
+      setMemberModal({
+        isOpen: true,
+        isEdit: true,
+        id: m._id,
+        name: m.name,
+        role: m.role,
+        hobby: m.hobby || '',
+        history: m.history || '',
+        isActive: m.isActive,
+        imageFile: null
+      });
+    } else {
+      setMemberModal({
+        isOpen: true,
+        isEdit: false,
+        id: null,
+        name: '',
+        role: '',
+        hobby: '',
+        history: '',
+        isActive: true,
+        imageFile: null
+      });
+    }
+  };
+
+  const handleMemberSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('name', memberModal.name);
+    formData.append('role', memberModal.role);
+    formData.append('hobby', memberModal.hobby);
+    formData.append('history', memberModal.history);
+    formData.append('isActive', memberModal.isActive);
+    if (memberModal.imageFile) {
+      formData.append('image', memberModal.imageFile);
+    }
+
+    try {
+      let res;
+      if (memberModal.isEdit) {
+        res = await API.put(`/members/${memberModal.id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        res = await API.post('/members', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+
+      if (res.data.success) {
+        showToast(memberModal.isEdit ? 'Member updated successfully!' : 'Member created successfully!');
+        setMemberModal(prev => ({ ...prev, isOpen: false }));
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error saving member profile', 'error');
+    }
+  };
+
+  const handleToggleMemberActive = async (m) => {
+    try {
+      const res = await API.put(`/members/${m._id}`, { isActive: !m.isActive });
+      if (res.data.success) {
+        showToast('Member status changed successfully.');
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error changing member status', 'error');
+    }
+  };
+
+  const handleDeleteMember = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this company member? This cannot be undone.')) return;
+    try {
+      const res = await API.delete(`/members/${id}`);
+      if (res.data.success) {
+        showToast('Member deleted successfully.');
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error deleting member', 'error');
+    }
+  };
+
 
   // ==========================================
   // --- PERFORMANCE HISTORY HANDLERS ---
@@ -1321,6 +1426,164 @@ const AdminDashboard = () => {
     );
   };
 
+  const renderMembers = () => {
+    return (
+      <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h3 style={{ color: 'var(--navy)', fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Company Members Registry</h3>
+            <p style={{ color: 'var(--gray-text)', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>Register staff and generate verified ID card QR codes</p>
+          </div>
+          <button onClick={() => handleOpenMemberModal(null)} className="btn btn-orange" style={{ padding: '0.5rem 1rem', borderRadius: '8px' }}>
+            + Add New Member
+          </button>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #EDF2F7', color: 'var(--navy)', fontWeight: 700 }}>
+                <th style={{ padding: '1rem' }}>Staff Photo</th>
+                <th style={{ padding: '1rem' }}>Name & Slug</th>
+                <th style={{ padding: '1rem' }}>Role</th>
+                <th style={{ padding: '1rem' }}>Hobby</th>
+                <th style={{ padding: '1rem' }}>Verification URL</th>
+                <th style={{ padding: '1rem' }}>QR Code ID</th>
+                <th style={{ padding: '1rem' }}>Status</th>
+                <th style={{ padding: '1rem' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-text)' }}>
+                    No company members registered yet. Click "+ Add New Member" to create one.
+                  </td>
+                </tr>
+              ) : (
+                members.map(m => {
+                  const localUrl = `${window.location.origin}/member/${m.slug}`;
+                  const prodUrl = `https://solvixgo.com/member/${m.slug}`;
+                  const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(localUrl)}`;
+
+                  return (
+                    <tr key={m._id} style={{ borderBottom: '1px solid #EDF2F7', verticalAlign: 'middle' }}>
+                      <td style={{ padding: '1rem' }}>
+                        <img 
+                          src={m.image?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300'} 
+                          alt={m.name} 
+                          style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '50%', border: '2px solid var(--orange)' }} 
+                        />
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--navy)' }}>{m.name}</div>
+                        <div style={{ color: 'var(--gray-text)', fontSize: '0.72rem', fontFamily: 'monospace' }}>/{m.slug}</div>
+                      </td>
+                      <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--navy)' }}>{m.role}</td>
+                      <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>{m.hobby || '-'}</td>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxWidth: '220px' }}>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(localUrl);
+                              showToast('Local Link copied to clipboard!');
+                            }} 
+                            style={{ 
+                              background: '#F1F5F9', 
+                              border: '1px solid #CBD5E1', 
+                              padding: '0.35rem 0.65rem', 
+                              borderRadius: '6px', 
+                              cursor: 'pointer', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 700, 
+                              color: 'var(--navy)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.25rem'
+                            }}
+                            title="Copy link for local testing"
+                          >
+                            🔗 Copy Local Link
+                          </button>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(prodUrl);
+                              showToast('Production Link copied to clipboard!');
+                            }} 
+                            style={{ 
+                              background: '#FEF3C7', 
+                              border: '1px solid #FDE68A', 
+                              padding: '0.35rem 0.65rem', 
+                              borderRadius: '6px', 
+                              cursor: 'pointer', 
+                              fontSize: '0.72rem', 
+                              fontWeight: 700, 
+                              color: '#B45309',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.25rem'
+                            }}
+                            title="Copy link for production (solvixgo.com)"
+                          >
+                            🌍 Copy Prod Link
+                          </button>
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                          <img 
+                            src={qrCodeApiUrl} 
+                            alt="QR Code" 
+                            style={{ width: '40px', height: '40px', border: '1px solid #EDF2F7', padding: '2px', background: '#fff', borderRadius: '4px' }} 
+                            title="Scan to verify staff"
+                          />
+                          <a 
+                            href={qrCodeApiUrl} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            style={{ fontSize: '0.65rem', color: 'var(--orange)', fontWeight: 700, textDecoration: 'none' }}
+                          >
+                            Download QR
+                          </a>
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <button
+                          onClick={() => handleToggleMemberActive(m)}
+                          style={{
+                            padding: '0.25rem 0.65rem',
+                            borderRadius: '50px',
+                            border: 'none',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: m.isActive ? '#D1FAE5' : '#FEE2E2',
+                            color: m.isActive ? '#065F46' : '#991B1B'
+                          }}
+                        >
+                          {m.isActive ? 'Active' : 'Inactive'}
+                        </button>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button onClick={() => handleOpenMemberModal(m)} style={{ background: '#EFF6FF', border: 'none', color: '#1E40AF', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
+                          <button onClick={() => handleDeleteMember(m._id)} style={{ background: '#FEF2F2', border: 'none', color: '#991B1B', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F4F6F9' }}>
       
@@ -1403,6 +1666,7 @@ const AdminDashboard = () => {
         {activeTab === 'posts' && renderPosts()}
         {activeTab === 'contacts' && renderContacts()}
         {activeTab === 'managers' && renderManagers()}
+        {activeTab === 'members' && renderMembers()}
         {activeTab === 'history' && renderHistory()}
 
       </main>
@@ -1587,6 +1851,54 @@ const AdminDashboard = () => {
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setAdminModal(p => ({ ...p, isOpen: false }))} style={{ background: '#F1F5F9', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Admin</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Member CRUD Form Modal */}
+      {memberModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '500px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ color: 'var(--navy)', fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem' }}>
+              {memberModal.isEdit ? 'Edit Member Profile' : 'Register New Company Member'}
+            </h3>
+            
+            <form onSubmit={handleMemberSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Full Name *</label>
+                <input type="text" required value={memberModal.name} onChange={(e) => setMemberModal(p => ({ ...p, name: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Professional Role *</label>
+                <input type="text" required placeholder="e.g. Lead Dispatcher, Operations Manager" value={memberModal.role} onChange={(e) => setMemberModal(p => ({ ...p, role: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Hobby / Interests</label>
+                <input type="text" placeholder="e.g. Photography, Cycling, Chess" value={memberModal.hobby} onChange={(e) => setMemberModal(p => ({ ...p, hobby: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Profile History / Brief Bio</label>
+                <textarea rows="4" placeholder="Brief history or professional background of the staff member..." value={memberModal.history} onChange={(e) => setMemberModal(p => ({ ...p, history: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Staff Photo (Image upload)</label>
+                <input type="file" accept="image/*" onChange={(e) => setMemberModal(p => ({ ...p, imageFile: e.target.files[0] }))} style={{ width: '100%' }} />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="checkbox" id="memb-active" checked={memberModal.isActive} onChange={(e) => setMemberModal(p => ({ ...p, isActive: e.target.checked }))} />
+                <label htmlFor="memb-active" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--navy)', cursor: 'pointer' }}>Active (Allows ID card verification check)</label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setMemberModal(p => ({ ...p, isOpen: false }))} style={{ background: '#F1F5F9', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Profile</button>
               </div>
             </form>
           </div>

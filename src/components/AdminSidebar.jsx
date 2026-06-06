@@ -117,6 +117,9 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
               <Link to="/admin?tab=managers" style={getLinkStyle('/admin', 'managers')} onClick={() => setMobileOpen(false)}>
                 🛡️ Manage Admins
               </Link>
+              <Link to="/admin?tab=members" style={getLinkStyle('/admin', 'members')} onClick={() => setMobileOpen(false)}>
+                🆔 Company Members
+              </Link>
               <Link to="/admin?tab=history" style={getLinkStyle('/admin', 'history')} onClick={() => setMobileOpen(false)}>
                 📈 Performance History
               </Link>

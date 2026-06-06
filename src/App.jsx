@@ -16,6 +16,7 @@ import Orders from './pages/admin/Orders';
 import Riders from './pages/admin/Riders';
 import Billing from './pages/admin/Billing';
 import BillingDetail from './pages/admin/BillingDetail';
+import MemberDetail from './pages/MemberDetail';
 
 import './assets/main.css';
 
@@ -45,6 +46,7 @@ const AppContent = () => {
           <Route path="/" element={<Home />} />
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/:slug" element={<BlogDetail />} />
+          <Route path="/member/:slug" element={<MemberDetail />} />
 
           {/* Secure Rider Portal */}
           <Route 
