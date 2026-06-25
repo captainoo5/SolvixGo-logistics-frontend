@@ -12,6 +12,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Import New Pages
 import RiderDashboard from './pages/rider/RiderDashboard';
 import RiderOrderDetail from './pages/rider/RiderOrderDetail';
+import RiderRegister from './pages/rider/RiderRegister';
+import RiderStatus from './pages/rider/RiderStatus';
 import Orders from './pages/admin/Orders';
 import Riders from './pages/admin/Riders';
 import Billing from './pages/admin/Billing';
@@ -49,6 +51,9 @@ const AppContent = () => {
           <Route path="/member/:slug" element={<MemberDetail />} />
 
           {/* Secure Rider Portal */}
+          <Route path="/rider/login" element={<Navigate to="/login" replace />} />
+          <Route path="/rider/register" element={<RiderRegister />} />
+          <Route path="/rider/status" element={<RiderStatus />} />
           <Route 
             path="/rider/dashboard" 
             element={

@@ -7,12 +7,22 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
   const location = useLocation();
   const adminName = localStorage.getItem('solvix_admin') || 'Admin';
   const adminRole = localStorage.getItem('solvix_admin_role') || 'admin';
+  
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    return localStorage.getItem('solvix_sidebar_collapsed') === 'true';
+  });
+
+  const toggleCollapse = () => {
+    const nextState = !isCollapsed;
+    setIsCollapsed(nextState);
+    localStorage.setItem('solvix_sidebar_collapsed', String(nextState));
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('solvix_token');
     localStorage.removeItem('solvix_admin');
     localStorage.removeItem('solvix_admin_role');
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   const getLinkStyle = (path, tabName = '') => {
@@ -44,12 +54,42 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
       transition: 'var(--transition)',
       textDecoration: 'none',
       background: isActive ? 'var(--orange)' : 'transparent',
-      color: '#fff'
+      color: '#fff',
+      whiteSpace: 'nowrap'
     };
   };
 
   return (
     <>
+      {/* Desktop Collapse Toggle Button */}
+      <button 
+        onClick={toggleCollapse} 
+        style={{
+          position: 'fixed',
+          left: isCollapsed ? '15px' : '245px',
+          top: '18px',
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          background: 'var(--navy)',
+          color: '#fff',
+          border: '2px solid #fff',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10005,
+          transition: 'left 0.3s ease',
+          fontWeight: 800,
+          fontSize: '0.8rem'
+        }}
+        title={isCollapsed ? "Show Sidebar" : "Hide Sidebar"}
+        className="sidebar-toggle-btn"
+      >
+        {isCollapsed ? '▶' : '◀'}
+      </button>
+
       {/* Mobile Backdrop Overlay */}
       {isMobileOpen && (
         <div 
@@ -67,15 +107,16 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
       {/* Sidebar Navigation */}
       <aside 
         style={{
-          width: '260px',
+          width: isCollapsed ? '0px' : '260px',
           background: 'var(--navy)',
           color: '#fff',
           display: 'flex',
           flexDirection: 'column',
-          padding: '2rem 1rem',
+          padding: isCollapsed ? '0px' : '2rem 1rem',
           flexShrink: 0,
-          transition: 'transform 0.3s ease',
-          zIndex: 10001
+          transition: 'width 0.3s ease, padding 0.3s ease, transform 0.3s ease',
+          zIndex: 10001,
+          overflow: 'hidden'
         }} 
         className={`sidebar ${isMobileOpen ? 'open' : ''}`}
       >
@@ -102,54 +143,54 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
           <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: 800, padding: '0.5rem 1.25rem 0.25rem 1.25rem' }}>Operations</span>
           
           <Link to="/admin/orders" style={getLinkStyle('/admin/orders')} onClick={() => setMobileOpen(false)}>
-            🚴 Orders Feed
+            Orders Feed
           </Link>
 
           <Link to="/admin?tab=overview" style={getLinkStyle('/admin', 'overview')} onClick={() => setMobileOpen(false)}>
-            📊 Dashboard Stats
+            Dashboard Stats
           </Link>
           
           {adminRole === 'superadmin' && (
             <>
               <Link to="/admin/riders" style={getLinkStyle('/admin/riders')} onClick={() => setMobileOpen(false)}>
-                👤 Dispatch Riders
+                Dispatch Riders
               </Link>
               <Link to="/admin?tab=managers" style={getLinkStyle('/admin', 'managers')} onClick={() => setMobileOpen(false)}>
-                🛡️ Manage Admins
+                Manage Admins
               </Link>
               <Link to="/admin?tab=members" style={getLinkStyle('/admin', 'members')} onClick={() => setMobileOpen(false)}>
-                🆔 Company Members
+                Company Members
               </Link>
               <Link to="/admin?tab=history" style={getLinkStyle('/admin', 'history')} onClick={() => setMobileOpen(false)}>
-                📈 Performance History
+                Performance History
               </Link>
             </>
           )}
 
           <Link to="/admin/billing" style={getLinkStyle('/admin/billing')} onClick={() => setMobileOpen(false)}>
-            💳 Invoices & Billing
+            Invoices & Billing
           </Link>
 
           <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: 800, padding: '0.75rem 1.25rem 0.25rem 1.25rem' }}>Content Management</span>
 
           <Link to="/admin?tab=services" style={getLinkStyle('/admin', 'services')} onClick={() => setMobileOpen(false)}>
-            📦 Services Fleet
+            Services Fleet
           </Link>
 
           <Link to="/admin?tab=partners" style={getLinkStyle('/admin', 'partners')} onClick={() => setMobileOpen(false)}>
-            🤝 Retail Partners
+            Retail Partners
           </Link>
 
           <Link to="/admin?tab=testimonials" style={getLinkStyle('/admin', 'testimonials')} onClick={() => setMobileOpen(false)}>
-            ⭐ Testimonials
+            Testimonials
           </Link>
 
           <Link to="/admin?tab=posts" style={getLinkStyle('/admin', 'posts')} onClick={() => setMobileOpen(false)}>
-            📝 Blog Articles
+            Blog Articles
           </Link>
 
           <Link to="/admin?tab=contacts" style={getLinkStyle('/admin', 'contacts')} onClick={() => setMobileOpen(false)}>
-            ✉️ Contact Messages
+            Contact Messages
           </Link>
         </nav>
 
@@ -159,8 +200,15 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
           background: 'rgba(239, 68, 68, 0.1)',
           color: '#F87171',
           marginTop: '1rem'
-        }}>🚪 Sign Out</button>
+        }}>Sign Out</button>
       </aside>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media (max-width: 768px) {
+          .sidebar-toggle-btn {
+            display: none !important;
+          }
+        }
+      `}} />
     </>
   );
 };

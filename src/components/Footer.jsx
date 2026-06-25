@@ -32,6 +32,7 @@ const Footer = () => {
             <li><Link to="/#about">About Us</Link></li>
             <li><Link to="/blog">Blog News</Link></li>
             <li><Link to="/#contact">Contact</Link></li>
+            <li><Link to="/rider/register">Register as a Rider</Link></li>
             <li><Link to="/login" style={{ fontSize: '0.78rem', opacity: 0.6 }}>Staff Portal</Link></li>
           </ul>
         </div>
@@ -52,15 +53,15 @@ const Footer = () => {
         <div>
           <h4 className="footer-col-title">Office Address</h4>
           <div className="footer-contact-item">
-            <span>📍</span>
+            <span style={{ fontWeight: 'bold' }}>Address: </span>
             <span>Office No. 7, Alhajin Yara Plaza, Tashan Dukku Road, Gombe State, Nigeria</span>
           </div>
           <div className="footer-contact-item">
-            <span>📞</span>
+            <span style={{ fontWeight: 'bold' }}>Phone: </span>
             <span>07079018011<br />08128830983</span>
           </div>
           <div className="footer-contact-item">
-            <span>✉️</span>
+            <span style={{ fontWeight: 'bold' }}>Email: </span>
             <span>solvixgo@gmail.com</span>
           </div>
         </div>

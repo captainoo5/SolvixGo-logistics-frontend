@@ -43,7 +43,8 @@ const AdminDashboard = () => {
 
   // --- Modal Form States ---
   const [serviceModal, setServiceModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', description: '', badge: '', displayOrder: 0, isActive: true, iconFile: null });
-  const [partnerModal, setPartnerModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', website: '', isActive: true, logoFile: null });
+  const [partnerModal, setPartnerModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', website: '', isActive: true, logoFile: null, billingPlan: 'None', billingDueDay: '' });
+  const [partnerViewModal, setPartnerViewModal] = useState({ isOpen: false, partner: null, apiKey: '' });
   const [postModal, setPostModal] = useState({ isOpen: false, isEdit: false, id: null, title: '', category: 'Company News', body: '', tags: '', isPublished: false, coverFile: null });
 
   // --- Helper: Trigger Toast Alert ---
@@ -150,7 +151,7 @@ const AdminDashboard = () => {
     localStorage.removeItem('solvix_token');
     localStorage.removeItem('solvix_admin');
     showToast('Admin logged out successfully.');
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   // ==========================================
@@ -279,7 +280,9 @@ const AdminDashboard = () => {
         name: p.name,
         website: p.website || '',
         isActive: p.isActive,
-        logoFile: null
+        logoFile: null,
+        billingPlan: p.billingPlan || 'None',
+        billingDueDay: p.billingDueDay || ''
       });
     } else {
       setPartnerModal({
@@ -289,7 +292,9 @@ const AdminDashboard = () => {
         name: '',
         website: '',
         isActive: true,
-        logoFile: null
+        logoFile: null,
+        billingPlan: 'None',
+        billingDueDay: ''
       });
     }
   };
@@ -300,6 +305,8 @@ const AdminDashboard = () => {
     formData.append('name', partnerModal.name);
     formData.append('website', partnerModal.website);
     formData.append('isActive', partnerModal.isActive);
+    formData.append('billingPlan', partnerModal.billingPlan);
+    formData.append('billingDueDay', partnerModal.billingDueDay);
     if (partnerModal.logoFile) {
       formData.append('logo', partnerModal.logoFile);
     }
@@ -368,6 +375,64 @@ const AdminDashboard = () => {
       setPartners(prev => prev.filter(item => item._id !== id));
       showToast('Offline Mode: Partner deleted locally.', 'warning');
     }
+  };
+
+  const handleOpenPartnerViewModal = (p) => {
+    setPartnerViewModal({
+      isOpen: true,
+      partner: p,
+      apiKey: ''
+    });
+  };
+
+  const handleGenerateApiKey = async (partnerId) => {
+    try {
+      const res = await API.post(`/partners/${partnerId}/keys`);
+      if (res.data.success) {
+        showToast('API key generated successfully!');
+        setPartnerViewModal(p => ({
+          ...p,
+          apiKey: res.data.apiKey,
+          partner: res.data.data
+        }));
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast(err.response?.data?.message || 'Error generating API key', 'error');
+    }
+  };
+
+  const handlePrintPartnerDocs = () => {
+    const printWindow = window.open('', '_blank');
+    const docsContent = document.getElementById('partner-api-docs-content').innerHTML;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Solvix Go - Partner API Documentation</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 2rem; color: #1f2937; line-height: 1.6; }
+            pre { background: #f3f4f6; padding: 1rem; border-radius: 8px; font-family: monospace; overflow-x: auto; }
+            code { font-family: monospace; color: #f47b00; background: #fff3e6; padding: 2px 4px; border-radius: 4px; }
+            h1, h2, h3 { color: #0D1B4D; }
+            h1 { border-bottom: 2px solid #f3f4f6; padding-bottom: 0.5rem; }
+            .header { text-align: center; margin-bottom: 2rem; border-bottom: 2px double #e5e7eb; padding-bottom: 1.5rem; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>SOLVIX GO DELIVERIES</h2>
+            <h3>PARTNER API INTEGRATION MANUAL</h3>
+            <p>Partner: ${partnerViewModal.partner?.name}</p>
+          </div>
+          \${docsContent}
+          <script>
+            window.onload = function() { window.print(); window.close(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
 
@@ -785,23 +850,29 @@ const AdminDashboard = () => {
         {isSuperadmin && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
             <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #10B981' }}>
-              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>💰</span>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+              </div>
               <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Generated Revenue</div>
-              <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>₦{revenueStats.totalRevenue.toLocaleString()}</div>
+              <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>₦{revenueStats.totalRevenue.toLocaleString()}</div>
               <p style={{ color: 'var(--gray-text)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>Delivered orders total billing</p>
             </div>
 
             <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #EF4444' }}>
-              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>⛽</span>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22h12M4 2h8a2 2 0 0 1 2 2v18H4V4a2 2 0 0 1 2-2zM14 9h4a2 2 0 0 1 2 2v6a2 2 0 0 0 2 2h0M9 6h2v4H9z"/></svg>
+              </div>
               <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Fuel Costs (Expenses)</div>
-              <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>₦{revenueStats.totalFuelExpenses.toLocaleString()}</div>
+              <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>₦{revenueStats.totalFuelExpenses.toLocaleString()}</div>
               <p style={{ color: 'var(--gray-text)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>Total rider fuel expenditures</p>
             </div>
 
             <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #2563EB' }}>
-              <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>📈</span>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              </div>
               <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Net Profit (Revenue - Fuel)</div>
-              <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>₦{revenueStats.netProfit.toLocaleString()}</div>
+              <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>₦{revenueStats.netProfit.toLocaleString()}</div>
               <p style={{ color: 'var(--gray-text)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>Profits after daily cost removal</p>
             </div>
           </div>
@@ -811,27 +882,35 @@ const AdminDashboard = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
           
           <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid var(--orange)' }}>
-            <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>📦</span>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            </div>
             <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Services Fleet</div>
-            <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>{totalServices}</div>
+            <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>{totalServices}</div>
           </div>
 
           <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid var(--navy)' }}>
-            <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>🤝</span>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--navy)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
             <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Retail Partners</div>
-            <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>{activePartners} <span style={{ fontSize: '0.85rem', color: 'var(--gray-text)', fontWeight: 500 }}>Active</span></div>
+            <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>{activePartners} <span style={{ fontSize: '0.85rem', color: 'var(--gray-text)', fontWeight: 500 }}>Active</span></div>
           </div>
 
           <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #10B981' }}>
-            <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>⭐</span>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
             <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Public Reviews</div>
-            <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>{approvedReviews} <span style={{ fontSize: '0.85rem', color: 'var(--gray-text)', fontWeight: 500 }}>Approved</span></div>
+            <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>{approvedReviews} <span style={{ fontSize: '0.85rem', color: 'var(--gray-text)', fontWeight: 500 }}>Approved</span></div>
           </div>
 
           <div className="metric-card" style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)', borderLeft: '4px solid #F59E0B' }}>
-            <span style={{ fontSize: '1.8rem', display: 'block', marginBottom: '0.5rem' }}>✉️</span>
+            <div style={{ marginBottom: '0.5rem' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            </div>
             <div style={{ color: 'var(--gray-text)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>New Inquiries</div>
-            <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>{newInquiries} <span style={{ fontSize: '0.85rem', color: 'var(--gray-text)', fontWeight: 500 }}>Pending</span></div>
+            <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>{newInquiries} <span style={{ fontSize: '0.85rem', color: 'var(--gray-text)', fontWeight: 500 }}>Pending</span></div>
           </div>
 
         </div>
@@ -863,7 +942,7 @@ const AdminDashboard = () => {
                     </div>
                     <div style={{ color: 'var(--navy)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' }}>Sub: {c.subject}</div>
                     <p style={{ color: 'var(--gray-text)', fontSize: '0.8rem', lineHeight: 1.5 }}>{c.message.slice(0, 100)}{c.message.length > 100 ? '...' : ''}</p>
-                    <span style={{ fontSize: '0.7rem', color: '#94A3B8', display: 'block', marginTop: '0.5rem' }}>📞 {c.phone}</span>
+                    <span style={{ fontSize: '0.7rem', color: '#94A3B8', display: 'block', marginTop: '0.5rem' }}>Phone: {c.phone}</span>
                   </div>
                 ))}
               </div>
@@ -1040,6 +1119,7 @@ const AdminDashboard = () => {
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => handleOpenPartnerViewModal(p)} style={{ background: '#F1F5F9', border: 'none', color: 'var(--navy)', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>View API</button>
                       <button onClick={() => handleOpenPartnerModal(p)} style={{ background: '#EFF6FF', border: 'none', color: '#1E40AF', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
                       <button onClick={() => handleDeletePartner(p._id)} style={{ background: '#FEF2F2', border: 'none', color: '#991B1B', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
                     </div>
@@ -1196,8 +1276,8 @@ const AdminDashboard = () => {
                 <tr key={c._id} style={{ borderBottom: '1px solid #EDF2F7', verticalAlign: 'top' }}>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ fontWeight: 600, color: 'var(--navy)' }}>{c.fullName}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-text)', marginTop: '0.2rem' }}>📞 {c.phone}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-text)' }}>✉️ {c.email || 'None'}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-text)', marginTop: '0.2rem' }}>Phone: {c.phone}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-text)' }}>Email: {c.email || 'None'}</div>
                     <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '0.3rem', display: 'block' }}>Submitted: {new Date(c.createdAt || Date.now()).toLocaleString()}</span>
                   </td>
                   <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--navy)' }}>{c.subject}</td>
@@ -1220,10 +1300,10 @@ const AdminDashboard = () => {
                                     c.status === 'Resolved' ? '#D1FAE5' : '#F1F5F9'
                       }}
                     >
-                      <option value="New">🟢 New</option>
-                      <option value="In Progress">🔵 In Progress</option>
-                      <option value="Resolved">✅ Resolved</option>
-                      <option value="Cancelled">❌ Cancelled</option>
+                      <option value="New">New</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Resolved">Resolved</option>
+                      <option value="Cancelled">Cancelled</option>
                     </select>
                   </td>
                   <td style={{ padding: '1rem' }}>
@@ -1370,7 +1450,7 @@ const AdminDashboard = () => {
         {/* Performance Results */}
         {!historySelectedId ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--gray-text)', fontWeight: 600 }}>
-            🔍 Select a rider or admin name above to populate history tracking charts and records.
+            Select a rider or admin name above to populate history tracking charts and records.
           </div>
         ) : historyData.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--gray-text)', fontWeight: 600 }}>
@@ -1381,13 +1461,13 @@ const AdminDashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
               <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '1.25rem', border: '1px solid #EDF2F7', textAlign: 'center' }}>
                 <div style={{ color: 'var(--gray-text)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Total Completed Deliveries</div>
-                <div style={{ color: 'var(--navy)', fontSize: '2rem', fontWeight: 800 }}>
+                <div style={{ color: 'var(--navy)', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>
                   {historyData.reduce((sum, day) => sum + day.completedOrders, 0)}
                 </div>
               </div>
               <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '1.25rem', border: '1px solid #EDF2F7', textAlign: 'center' }}>
                 <div style={{ color: 'var(--gray-text)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>Total Revenue Generated</div>
-                <div style={{ color: '#10B981', fontSize: '2rem', fontWeight: 800 }}>
+                <div style={{ color: '#10B981', fontSize: '1.6rem', fontWeight: 800, wordBreak: 'break-all', overflowWrap: 'break-word' }}>
                   ₦{historyData.reduce((sum, day) => sum + day.revenue, 0).toLocaleString()}
                 </div>
               </div>
@@ -1504,7 +1584,7 @@ const AdminDashboard = () => {
                             }}
                             title="Copy link for local testing"
                           >
-                            🔗 Copy Local Link
+                            Copy Local Link
                           </button>
                           <button 
                             onClick={() => {
@@ -1527,7 +1607,7 @@ const AdminDashboard = () => {
                             }}
                             title="Copy link for production (solvixgo.com)"
                           >
-                            🌍 Copy Prod Link
+                            Copy Prod Link
                           </button>
                         </div>
                       </td>
@@ -1606,7 +1686,7 @@ const AdminDashboard = () => {
           gap: '0.5rem',
           animation: 'slideIn 0.3s ease'
         }}>
-          {toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : '✅'} {toast.text}
+          {toast.text}
         </div>
       )}
 
@@ -1654,7 +1734,7 @@ const AdminDashboard = () => {
             <p style={{ color: 'var(--gray-text)', fontSize: '0.85rem' }}>Solvix Go Gombe HQ Operations</p>
           </div>
           <div style={{ color: 'var(--navy)', fontWeight: 600, fontSize: '0.85rem', background: '#fff', padding: '0.5rem 1rem', borderRadius: '8px', boxShadow: 'var(--card-shadow)' }}>
-            📅 Local Time: {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+            Local Time: {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
           </div>
         </header>
 
@@ -1743,6 +1823,21 @@ const AdminDashboard = () => {
                 <input type="url" value={partnerModal.website} onChange={(e) => setPartnerModal(p => ({ ...p, website: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
               </div>
 
+              <div style={{ marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Billing Plan *</label>
+                  <select value={partnerModal.billingPlan} onChange={(e) => setPartnerModal(p => ({ ...p, billingPlan: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)', cursor: 'pointer' }}>
+                    <option value="None">None (Inactive for Orders)</option>
+                    <option value="Weekly">Weekly Plan</option>
+                    <option value="Monthly">Monthly Plan</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Due Day (1-31)</label>
+                  <input type="number" min="1" max="31" value={partnerModal.billingDueDay} onChange={(e) => setPartnerModal(p => ({ ...p, billingDueDay: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} placeholder="e.g. 5" />
+                </div>
+              </div>
+
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Brand Logo Image</label>
                 <input type="file" accept="image/*" onChange={(e) => setPartnerModal(p => ({ ...p, logoFile: e.target.files[0] }))} style={{ width: '100%' }} />
@@ -1758,6 +1853,123 @@ const AdminDashboard = () => {
                 <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2b. Partner View API & Docs Modal */}
+      {partnerViewModal.isOpen && partnerViewModal.partner && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '650px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ color: 'var(--navy)', fontSize: '1.25rem', fontWeight: 800, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{partnerViewModal.partner.name} - API Keys & Docs</span>
+              <button onClick={() => setPartnerViewModal({ isOpen: false, partner: null, apiKey: '' })} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--gray-text)' }}>✕</button>
+            </h3>
+
+            {/* API Credentials */}
+            <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '1.25rem', border: '1px solid #EDF2F7', marginBottom: '1.5rem' }}>
+              <h4 style={{ color: 'var(--navy)', margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: 700 }}>Integration Credentials</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+                <div><strong>Integration Type:</strong> API Integration</div>
+                <div><strong>API Key Prefix:</strong> <code>{partnerViewModal.partner.apiKeyPrefix || 'No key generated yet'}</code></div>
+                <div><strong>Webhook Endpoint URL:</strong> {partnerViewModal.partner.webhookUrl || 'Not configured'}</div>
+                <div><strong>Webhook Signature Secret:</strong> <code>{partnerViewModal.partner.webhookSecret || 'Not configured'}</code></div>
+              </div>
+
+              {/* Newly Generated API Key Warning */}
+              {partnerViewModal.apiKey && (
+                <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', padding: '0.75rem', marginTop: '1rem', color: '#B45309' }}>
+                  <strong style={{ display: 'block', marginBottom: '0.25rem' }}>API Key Generated Successfully:</strong>
+                  <code style={{ fontSize: '0.95rem', fontWeight: 700, wordBreak: 'break-all', display: 'block', padding: '0.4rem', background: '#fff', borderRadius: '4px', border: '1px solid #FDE68A' }}>
+                    {partnerViewModal.apiKey}
+                  </code>
+                  <span style={{ fontSize: '0.75rem', display: 'block', marginTop: '0.4rem' }}>Copy this key now. For security reasons, it will not be displayed again.</span>
+                </div>
+              )}
+
+              <button 
+                onClick={() => handleGenerateApiKey(partnerViewModal.partner._id)}
+                style={{
+                  background: 'var(--navy)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  marginTop: '1rem'
+                }}
+              >
+                {partnerViewModal.partner.apiKeyPrefix ? 'Rotate / Re-Generate API Key' : 'Generate API Key'}
+              </button>
+            </div>
+
+            {/* API Documentation */}
+            <div style={{ borderTop: '2px solid #EDF2F7', paddingTop: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h4 style={{ color: 'var(--navy)', margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Developer API Manual</h4>
+                <button 
+                  onClick={handlePrintPartnerDocs}
+                  style={{
+                    background: '#10B981',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}
+                >
+                  Download Documentation PDF
+                </button>
+              </div>
+
+              {/* Documentation Content Area */}
+              <div id="partner-api-docs-content" style={{ background: '#FAFBFD', borderRadius: '12px', padding: '1.25rem', border: '1px solid #E2E8F0', fontSize: '0.85rem', color: '#334155', maxHeight: '250px', overflowY: 'auto', lineHeight: 1.6 }}>
+                <h4>1. Authentication</h4>
+                <p>Include your secret API key in the request headers under the <code>x-api-key</code> key. Keep this key secure as it grants access to create bookings on behalf of your brand.</p>
+                <pre style={{ background: '#f1f5f9', padding: '0.75rem', borderRadius: '6px', overflowX: 'auto', fontSize: '0.75rem' }}>
+{`Headers:
+{
+  "Content-Type": "application/json",
+  "x-api-key": "svgo_xxxxxxxxxxxxxxxxxxxxxxxx"
+}`}
+                </pre>
+
+                <h4>2. Create Order</h4>
+                <p>Submit a <code>POST</code> request to the bookings endpoint to instantiate a delivery. The delivery charges are calculated based on the distance zone provided.</p>
+                <p><strong>Endpoint:</strong> <code>POST https://api.solvixgo.com/api/v1/partner/orders</code></p>
+                <pre style={{ background: '#f1f5f9', padding: '0.75rem', borderRadius: '6px', overflowX: 'auto', fontSize: '0.75rem' }}>
+{`Request Body:
+{
+  "customerName": "Fatima Bello",
+  "customerPhone": "+2347079018011",
+  "receiverPhone": "+2348039918012",
+  "pickupAddress": "Solvix Plaza Gombe",
+  "dropoffAddress": "Federal Lowcost Estate Gombe",
+  "itemDescription": "Cloth Package / Hampers",
+  "distanceZone": "Short",
+  "notes": "Fragile items. Handle with care."
+}`}
+                </pre>
+
+                <h4>3. Distance Zones & Billing Plans</h4>
+                <ul>
+                  <li><strong>Short Zone:</strong> ₦500</li>
+                  <li><strong>Medium Zone:</strong> ₦700</li>
+                  <li><strong>Long Zone:</strong> ₦1,000</li>
+                </ul>
+                <p>All successfully completed bookings are aggregated to your active billing cycle (<strong>{partnerViewModal.partner.billingPlan} plan</strong>) and invoiced periodically on your due day.</p>
+
+                <h4>4. Webhook In Transit Notification</h4>
+                <p>When the rider transitions the order to "In Transit", a secure webhook payload is sent to your Webhook URL with signature verification using your signature secret.</p>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -107,13 +107,13 @@ const Orders = () => {
   useAdminSocket(
     (payload) => {
       // order:new event
-      showToast(`🔔 New Order Created for ${payload.order.customerName}!`, 'success');
+      showToast(`New Order Created for ${payload.order.customerName}!`, 'success');
       // Append if it matches current filter or just refetch
       fetchOrders();
     },
     (payload) => {
       // order:status_updated event
-      showToast(`🚴 Order Status Updated: ${payload.status}`, 'info');
+      showToast(`Order Status Updated: ${payload.status}`, 'info');
       fetchOrders();
     }
   );
@@ -127,7 +127,7 @@ const Orders = () => {
       }
       const res = await API.post('/orders', payload);
       if (res.data.success) {
-        showToast('🎉 Order created successfully!');
+        showToast('Order created successfully!');
         setIsCreateModalOpen(false);
         setCreateForm({
           customerName: '',
@@ -244,7 +244,7 @@ const Orders = () => {
           gap: '0.5rem',
           animation: 'slideIn 0.3s ease'
         }}>
-          {toast.type === 'error' ? '❌' : toast.type === 'warning' ? '⚠️' : 'ℹ️'} {toast.text}
+          {toast.text}
         </div>
       )}
 
@@ -296,7 +296,7 @@ const Orders = () => {
             className="btn btn-orange"
             style={{ padding: '0.75rem 1.5rem', borderRadius: '10px', fontWeight: 700 }}
           >
-            📦 Create New Order
+            Create New Order
           </button>
         </header>
 
@@ -387,14 +387,14 @@ const Orders = () => {
                       </td>
                       <td style={{ padding: '1rem' }}>
                         <div style={{ fontWeight: 600 }}>{o.customerName}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--gray-text)' }}>📞 {o.customerPhone}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--gray-text)' }}>Phone: {o.customerPhone}</div>
                       </td>
                       <td style={{ padding: '1rem', fontWeight: 600 }}>
                         {o.receiverPhone}
                       </td>
                       <td style={{ padding: '1rem', maxWidth: '250px' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>📍 {o.pickupAddress}</div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-text)', marginTop: '0.2rem' }}>🏁 {o.dropoffAddress}</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Pickup: {o.pickupAddress}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-text)', marginTop: '0.2rem' }}>Dropoff: {o.dropoffAddress}</div>
                       </td>
                       <td style={{ padding: '1rem' }}>
                         {o.assignedRider ? (

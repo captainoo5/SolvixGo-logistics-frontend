@@ -121,7 +121,7 @@ const AdminLogin = () => {
                 transition: 'var(--transition)'
               }}
             >
-              📱 Install Admin App on Device
+              Install Admin App on Device
             </button>
           </div>
         )}
@@ -141,7 +141,7 @@ const AdminLogin = () => {
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <span>⚠️</span> {errorMsg}
+            {errorMsg}
           </div>
         )}
 

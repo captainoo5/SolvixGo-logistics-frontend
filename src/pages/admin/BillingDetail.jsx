@@ -41,7 +41,7 @@ const BillingDetail = () => {
     try {
       const res = await API.patch(`/billing/${id}/mark-paid`);
       if (res.data.success) {
-        showToast('🎉 Billing cycle successfully marked as PAID!');
+        showToast('Billing cycle successfully marked as PAID!');
         fetchInvoiceDetails();
       }
     } catch (err) {
@@ -90,7 +90,7 @@ const BillingDetail = () => {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          {toast.type === 'error' ? '❌' : '✅'} {toast.text}
+          {toast.text}
         </div>
       )}
 
@@ -151,14 +151,14 @@ const BillingDetail = () => {
                 className="btn btn-orange"
                 style={{ padding: '0.65rem 1.25rem', borderRadius: '10px', fontWeight: 700 }}
               >
-                ✅ Clear & Mark as Paid
+                Clear & Mark as Paid
               </button>
             )}
             <button 
               onClick={handlePrint}
               style={{ background: 'var(--navy)', color: '#fff', border: 'none', padding: '0.65rem 1.25rem', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
             >
-              🖨️ Print Invoice / Save PDF
+              Print Invoice / Save PDF
             </button>
           </div>
         </header>

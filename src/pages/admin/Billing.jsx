@@ -83,7 +83,7 @@ const Billing = () => {
           alignItems: 'center',
           gap: '0.5rem'
         }}>
-          {toast.type === 'error' ? '❌' : '✅'} {toast.text}
+          {toast.text}
         </div>
       )}
 

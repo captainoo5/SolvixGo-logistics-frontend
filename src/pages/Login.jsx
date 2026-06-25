@@ -139,7 +139,7 @@ const Login = () => {
                 transition: 'all 0.2s ease'
               }}
             >
-              📱 Install App on Device
+              Install App on Device
             </button>
           </div>
         )}
@@ -159,7 +159,7 @@ const Login = () => {
             alignItems: 'center',
             gap: '0.5rem'
           }}>
-            <span>⚠️</span> {errorMsg}
+            <span>Attention:</span> {errorMsg}
           </div>
         )}
 
