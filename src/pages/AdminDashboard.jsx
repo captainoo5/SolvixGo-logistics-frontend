@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../services/api';
 import AdminSidebar from '../components/AdminSidebar';
 import logoImg from '../assets/logo.png';
+import { subscribeToWebPush } from '../utils/webPushHelper';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -139,6 +140,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchAllData();
+    subscribeToWebPush().catch(err => console.error('PWA push registration failed:', err.message));
   }, []);
 
   const selectTab = (tab) => {
@@ -831,6 +833,347 @@ const AdminDashboard = () => {
     setHistoryData([]);
   }, [historyType]);
 
+  // --- Developer Integration Platform States & Fetchers ---
+  const [developers, setDevelopers] = useState([]);
+  const [developersLoading, setDevelopersLoading] = useState(false);
+  const [apiLogs, setApiLogs] = useState([]);
+  const [apiLogsLoading, setApiLogsLoading] = useState(false);
+  const [newCredentials, setNewCredentials] = useState(null);
+
+  const fetchAdminDevelopers = async () => {
+    setDevelopersLoading(true);
+    try {
+      const res = await API.get('/admin/developers');
+      if (res.data.success) {
+        setDevelopers(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch developers', err);
+      showToast(err.response?.data?.message || 'Failed to fetch developers', 'error');
+    } finally {
+      setDevelopersLoading(false);
+    }
+  };
+
+  const fetchAdminApiLogs = async () => {
+    setApiLogsLoading(true);
+    try {
+      const res = await API.get('/admin/developers/logs');
+      if (res.data.success) {
+        setApiLogs(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch API logs', err);
+      showToast(err.response?.data?.message || 'Failed to fetch API logs', 'error');
+    } finally {
+      setApiLogsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (['developer-applications', 'developer-management'].includes(activeTab)) {
+      fetchAdminDevelopers();
+    }
+    if (activeTab === 'api-logs') {
+      fetchAdminApiLogs();
+    }
+  }, [activeTab]);
+
+  const handleApproveDeveloper = async (dev) => {
+    if (!window.confirm(`Are you sure you want to approve ${dev.companyName}?`)) return;
+    try {
+      const res = await API.patch(`/admin/developers/${dev._id}/approve`);
+      if (res.data.success) {
+        showToast('Developer approved and API keys generated!', 'success');
+        fetchAdminDevelopers();
+        setNewCredentials({
+          companyName: dev.companyName,
+          publicKey: res.data.data.credentials.publicKey,
+          secretKey: res.data.data.credentials.secretKey
+        });
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to approve developer', 'error');
+    }
+  };
+
+  const handleRejectDeveloper = async (dev) => {
+    if (!window.confirm(`Are you sure you want to reject ${dev.companyName}?`)) return;
+    try {
+      const res = await API.patch(`/admin/developers/${dev._id}/reject`);
+      if (res.data.success) {
+        showToast('Developer application rejected.', 'success');
+        fetchAdminDevelopers();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to reject developer', 'error');
+    }
+  };
+
+  const handleSuspendDeveloper = async (dev) => {
+    if (!window.confirm(`Are you sure you want to suspend ${dev.companyName}?`)) return;
+    try {
+      const res = await API.patch(`/admin/developers/${dev._id}/suspend`);
+      if (res.data.success) {
+        showToast('Developer account suspended and API keys disabled.', 'success');
+        fetchAdminDevelopers();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to suspend developer', 'error');
+    }
+  };
+
+  const handleActivateDeveloper = async (dev) => {
+    if (!window.confirm(`Are you sure you want to activate ${dev.companyName}?`)) return;
+    try {
+      const res = await API.patch(`/admin/developers/${dev._id}/activate`);
+      if (res.data.success) {
+        showToast('Developer account reactivated and API keys enabled.', 'success');
+        fetchAdminDevelopers();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to activate developer', 'error');
+    }
+  };
+
+  const handleAdminRegenerateKeys = async (dev) => {
+    if (!window.confirm(`Are you sure you want to regenerate API keys for ${dev.companyName}? The existing keys will be disabled.`)) return;
+    try {
+      const res = await API.post(`/admin/developers/${dev._id}/regenerate-keys`);
+      if (res.data.success) {
+        showToast('API keys regenerated successfully!', 'success');
+        fetchAdminDevelopers();
+        setNewCredentials({
+          companyName: dev.companyName,
+          publicKey: res.data.data.publicKey,
+          secretKey: res.data.data.secretKey
+        });
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to regenerate keys', 'error');
+    }
+  };
+
+  const renderDeveloperApplications = () => {
+    const pendingDevs = developers.filter(d => d.status === 'pending');
+    return (
+      <div style={{ background: '#fff', padding: '2rem', borderRadius: '16px', boxShadow: 'var(--card-shadow)' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '1.5rem' }}>Pending Developer Applications</h3>
+        {developersLoading ? (
+          <div>Loading applications...</div>
+        ) : pendingDevs.length === 0 ? (
+          <div style={{ color: 'var(--gray-light)', padding: '2rem 0' }}>No pending developer applications.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #F1F5F9', color: 'var(--gray-light)', fontWeight: 700 }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Company</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Contact</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Email / Phone</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Business Type</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Description</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingDevs.map(dev => (
+                  <tr key={dev._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--navy)' }}>
+                      {dev.companyName}
+                      {dev.website && <a href={dev.website} target="_blank" rel="noreferrer" style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: 'var(--orange)' }}>Visit Web</a>}
+                    </td>
+                    <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>{dev.contactPerson}</td>
+                    <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>
+                      <div>{dev.email}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-light)' }}>{dev.phone}</div>
+                    </td>
+                    <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>{dev.businessType || 'N/A'}</td>
+                    <td style={{ padding: '1rem', color: 'var(--gray-text)', fontSize: '0.8rem', maxWidth: '250px', whiteSpace: 'normal', wordBreak: 'break-word' }}>{dev.description}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => handleApproveDeveloper(dev)}
+                          style={{ padding: '0.4rem 0.8rem', background: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectDeveloper(dev)}
+                          style={{ padding: '0.4rem 0.8rem', background: 'transparent', color: '#EF4444', border: '1px solid #EF4444', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderDeveloperManagement = () => {
+    return (
+      <div style={{ background: '#fff', padding: '2rem', borderRadius: '16px', boxShadow: 'var(--card-shadow)' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '1.5rem' }}>Registered Developers Directory</h3>
+        {developersLoading ? (
+          <div>Loading developers...</div>
+        ) : developers.length === 0 ? (
+          <div style={{ color: 'var(--gray-light)', padding: '2rem 0' }}>No registered developers found.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #F1F5F9', color: 'var(--gray-light)', fontWeight: 700 }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Company</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Contact</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>API Integration</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Created Date</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {developers.map(dev => (
+                  <tr key={dev._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--navy)' }}>
+                      {dev.companyName}
+                      <div style={{ fontSize: '0.8rem', color: 'var(--gray-light)', fontWeight: 500 }}>{dev.email}</div>
+                    </td>
+                    <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>{dev.contactPerson}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        fontSize: '0.78rem',
+                        textTransform: 'uppercase',
+                        background: dev.status === 'approved' ? '#ECFDF5' : (dev.status === 'pending' ? '#FFFBEB' : '#FEF2F2'),
+                        color: dev.status === 'approved' ? '#10B981' : (dev.status === 'pending' ? '#F59E0B' : '#EF4444')
+                      }}>
+                        {dev.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        fontSize: '0.78rem',
+                        background: dev.apiEnabled ? '#EFF6FF' : '#F1F5F9',
+                        color: dev.apiEnabled ? '#3B82F6' : '#64748B'
+                      }}>
+                        {dev.apiEnabled ? 'API Enabled' : 'API Disabled'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem', color: 'var(--gray-light)', fontSize: '0.85rem' }}>{new Date(dev.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: '1rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {dev.status === 'approved' && (
+                          <>
+                            <button
+                              onClick={() => handleSuspendDeveloper(dev)}
+                              style={{ padding: '0.4rem 0.8rem', background: '#F59E0B', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                            >
+                              Suspend
+                            </button>
+                            <button
+                              onClick={() => handleAdminRegenerateKeys(dev)}
+                              style={{ padding: '0.4rem 0.8rem', background: '#8B5CF6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                            >
+                              Regenerate Keys
+                            </button>
+                          </>
+                        )}
+                        {dev.status === 'suspended' && (
+                          <button
+                            onClick={() => handleActivateDeveloper(dev)}
+                            style={{ padding: '0.4rem 0.8rem', background: '#10B981', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                          >
+                            Reactivate
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderApiLogs = () => {
+    return (
+      <div style={{ background: '#fff', padding: '2rem', borderRadius: '16px', boxShadow: 'var(--card-shadow)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--navy)' }}>System API Integration Logs</h3>
+          <button
+            onClick={fetchAdminApiLogs}
+            disabled={apiLogsLoading}
+            style={{ padding: '0.4rem 0.8rem', background: '#F1F5F9', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+          >
+            Refresh Logs
+          </button>
+        </div>
+        {apiLogsLoading && apiLogs.length === 0 ? (
+          <div>Loading API logs...</div>
+        ) : apiLogs.length === 0 ? (
+          <div style={{ color: 'var(--gray-light)', padding: '2rem 0' }}>No developer API request logs recorded in the system.</div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #F1F5F9', color: 'var(--gray-light)', fontWeight: 700 }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Developer Company</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Method</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Endpoint</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Status Code</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Response Time</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {apiLogs.map(log => {
+                  const isErr = log.statusCode >= 400;
+                  return (
+                    <tr key={log._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.8rem 1rem', fontWeight: 700, color: 'var(--navy)' }}>
+                        {log.developerId?.companyName || 'Deleted Developer'}
+                        <div style={{ fontSize: '0.75rem', color: 'var(--gray-light)', fontWeight: 500 }}>{log.developerId?.email}</div>
+                      </td>
+                      <td style={{ padding: '0.8rem 1rem', fontWeight: 700, color: log.method === 'POST' ? '#3B82F6' : '#10B981' }}>{log.method}</td>
+                      <td style={{ padding: '0.8rem 1rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>{log.endpoint}</td>
+                      <td style={{ padding: '0.8rem 1rem' }}>
+                        <span style={{
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '6px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          background: isErr ? '#FEF2F2' : '#ECFDF5',
+                          color: isErr ? '#EF4444' : '#10B981'
+                        }}>
+                          {log.statusCode}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.8rem 1rem', color: 'var(--gray-text)' }}>{log.responseTime}ms</td>
+                      <td style={{ padding: '0.8rem 1rem', color: 'var(--gray-light)', fontSize: '0.85rem' }}>{new Date(log.createdAt).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // ==========================================
   // --- RENDERING SUB-PANELS ---
@@ -1748,6 +2091,9 @@ const AdminDashboard = () => {
         {activeTab === 'managers' && renderManagers()}
         {activeTab === 'members' && renderMembers()}
         {activeTab === 'history' && renderHistory()}
+        {activeTab === 'developer-applications' && renderDeveloperApplications()}
+        {activeTab === 'developer-management' && renderDeveloperManagement()}
+        {activeTab === 'api-logs' && renderApiLogs()}
 
       </main>
 
@@ -2113,6 +2459,63 @@ const AdminDashboard = () => {
                 <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Profile</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Credentials display modal after approve / regenerate */}
+      {newCredentials && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10010, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '550px', padding: '2.5rem 2rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', position: 'relative' }}>
+            <h3 style={{ color: '#6B21A8', fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>🔑 New Credentials Created</h3>
+            <p style={{ color: 'var(--gray-text)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+              These API keys are generated for <strong>{newCredentials.companyName}</strong>. Copy the secret key now; it will not be shown again.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray-light)', marginBottom: '0.4rem' }}>Public Key</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={newCredentials.publicKey}
+                    style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.88rem', background: '#F8FAFC', outline: 'none' }}
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(newCredentials.publicKey) & alert('Public Key copied')}
+                    style={{ padding: '0.75rem 1rem', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray-light)', marginBottom: '0.4rem' }}>Secret Key (SHOWING ONCE)</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={newCredentials.secretKey}
+                    style={{ flex: 1, padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px dashed #A855F7', fontSize: '0.88rem', background: '#FAF5FF', color: '#6B21A8', fontWeight: 'bold', outline: 'none' }}
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(newCredentials.secretKey) & alert('Secret Key copied')}
+                    style={{ padding: '0.75rem 1rem', background: '#A855F7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setNewCredentials(null)}
+              style={{ width: '100%', padding: '0.85rem', background: 'var(--navy)', color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 700 }}
+            >
+              Done, I have saved the credentials safely
+            </button>
           </div>
         </div>
       )}

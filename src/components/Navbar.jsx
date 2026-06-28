@@ -98,6 +98,14 @@ const Navbar = () => {
             </li>
             <li>
               <Link 
+                to="/developers"
+                className={location.pathname.startsWith('/developers') ? 'active' : ''}
+              >
+                Developers
+              </Link>
+            </li>
+            <li>
+              <Link 
                 to="/blog"
                 className={location.pathname.startsWith('/blog') ? 'active' : ''}
               >
@@ -150,6 +158,7 @@ const Navbar = () => {
         <Link to="/#about" onClick={(e) => handleLinkClick(e, '#about')}>About Us</Link>
         <Link to="/#testimonials" onClick={(e) => handleLinkClick(e, '#testimonials')}>Testimonials</Link>
         <Link to="/#partners" onClick={(e) => handleLinkClick(e, '#partners')}>Partners</Link>
+        <Link to="/developers" onClick={() => setMenuOpen(false)}>Developers</Link>
         <Link to="/blog" onClick={() => setMenuOpen(false)}>Blog</Link>
         <Link to="/#track" onClick={(e) => handleLinkClick(e, '#track')}>Track Parcel</Link>
         <Link to="/#contact" onClick={(e) => handleLinkClick(e, '#contact')}>Contact</Link>

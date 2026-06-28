@@ -19,6 +19,8 @@ import Riders from './pages/admin/Riders';
 import Billing from './pages/admin/Billing';
 import BillingDetail from './pages/admin/BillingDetail';
 import MemberDetail from './pages/MemberDetail';
+import Developers from './pages/Developers';
+import DeveloperDashboard from './pages/developer/DeveloperDashboard';
 
 import './assets/main.css';
 
@@ -31,10 +33,22 @@ const RiderProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Developer Protected Route wrapper
+const DeveloperProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('developer_token');
+  if (!token) {
+    return <Navigate to="/developers" replace />;
+  }
+  return children;
+};
+
 const AppContent = () => {
   const location = useLocation();
-  // Exclude public nav & footer from admin, rider, and login views
-  const isSpecialPortal = location.pathname.startsWith('/admin') || location.pathname.startsWith('/rider') || location.pathname === '/login';
+  // Exclude public nav & footer from admin, rider, developer dashboard, and login views
+  const isSpecialPortal = location.pathname.startsWith('/admin') || 
+                          location.pathname.startsWith('/rider') || 
+                          (location.pathname.startsWith('/developer') && !location.pathname.startsWith('/developers')) || 
+                          location.pathname === '/login';
 
   return (
     <div className="app-shell" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -46,6 +60,7 @@ const AppContent = () => {
         <Routes>
           {/* Public Landing Pages */}
           <Route path="/" element={<Home />} />
+          <Route path="/developers" element={<Developers />} />
           <Route path="/blog" element={<BlogList />} />
           <Route path="/blog/:slug" element={<BlogDetail />} />
           <Route path="/member/:slug" element={<MemberDetail />} />
@@ -68,6 +83,16 @@ const AppContent = () => {
               <RiderProtectedRoute>
                 <RiderOrderDetail />
               </RiderProtectedRoute>
+            } 
+          />
+
+          {/* Secure Developer Portal */}
+          <Route 
+            path="/developer/dashboard" 
+            element={
+              <DeveloperProtectedRoute>
+                <DeveloperDashboard />
+              </DeveloperProtectedRoute>
             } 
           />
 

@@ -13,6 +13,8 @@ API.interceptors.request.use(
     let token;
     if (window.location.pathname.startsWith('/rider')) {
       token = localStorage.getItem('rider_token') || localStorage.getItem('solvix_token');
+    } else if (window.location.pathname.startsWith('/developer')) {
+      token = localStorage.getItem('developer_token');
     } else {
       token = localStorage.getItem('solvix_token') || localStorage.getItem('rider_token');
     }
@@ -37,10 +39,14 @@ API.interceptors.response.use(
       localStorage.removeItem('solvix_admin_role');
       localStorage.removeItem('rider_token');
       localStorage.removeItem('rider_info');
+      localStorage.removeItem('developer_token');
+      localStorage.removeItem('developer_info');
       
       // Auto-redirect if in a protected portal and not already on the login page
       if ((window.location.pathname.startsWith('/admin') || window.location.pathname.startsWith('/rider')) && window.location.pathname !== '/login') {
         window.location.href = '/login';
+      } else if (window.location.pathname.startsWith('/developer/dashboard')) {
+        window.location.href = '/developers';
       }
     }
     return Promise.reject(error);

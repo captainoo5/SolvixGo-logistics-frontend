@@ -116,7 +116,10 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
           flexShrink: 0,
           transition: 'width 0.3s ease, padding 0.3s ease, transform 0.3s ease',
           zIndex: 10001,
-          overflow: 'hidden'
+          position: 'sticky',
+          top: 0,
+          height: '100vh',
+          overflowY: 'auto'
         }} 
         className={`sidebar ${isMobileOpen ? 'open' : ''}`}
       >
@@ -191,6 +194,20 @@ const AdminSidebar = ({ activeTab = '', isMobileOpen = false, setMobileOpen = ()
 
           <Link to="/admin?tab=contacts" style={getLinkStyle('/admin', 'contacts')} onClick={() => setMobileOpen(false)}>
             Contact Messages
+          </Link>
+
+          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: 800, padding: '0.75rem 1.25rem 0.25rem 1.25rem' }}>Integrations</span>
+
+          <Link to="/admin?tab=developer-applications" style={getLinkStyle('/admin', 'developer-applications')} onClick={() => setMobileOpen(false)}>
+            Applications
+          </Link>
+
+          <Link to="/admin?tab=developer-management" style={getLinkStyle('/admin', 'developer-management')} onClick={() => setMobileOpen(false)}>
+            Developer Management
+          </Link>
+
+          <Link to="/admin?tab=api-logs" style={getLinkStyle('/admin', 'api-logs')} onClick={() => setMobileOpen(false)}>
+            API Usage Logs
           </Link>
         </nav>
 

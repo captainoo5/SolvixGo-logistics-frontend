@@ -9,6 +9,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'logo.png'],
+      workbox: {
+        importScripts: ['/sw-push-handler.js']
+      },
       manifest: {
         name: 'Solvix Go',
         short_name: 'SolvixGo',

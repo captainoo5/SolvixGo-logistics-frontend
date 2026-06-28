@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import { useRiderSocket } from '../../hooks/useSocket';
 import logoImg from '../../assets/logo.png';
+import { subscribeToWebPush } from '../../utils/webPushHelper';
 
 const RiderDashboard = () => {
   const navigate = useNavigate();
@@ -101,6 +102,7 @@ const RiderDashboard = () => {
     if (rider) {
       fetchData();
       fetchPartners();
+      subscribeToWebPush().catch(err => console.error('PWA push registration failed:', err.message));
     }
   }, [rider]);
 
