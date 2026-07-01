@@ -8,6 +8,14 @@ import shieldImg from '../assets/shield.png';
 import trustImg from '../assets/trust.png';
 
 const Home = () => {
+  const getImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const baseURL = apiURL.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+    return `${baseURL}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   // --- Services State ---
   const [services, setServices] = useState([]);
 
@@ -514,7 +522,7 @@ const Home = () => {
               <div className="partner-card" key={`${partner._id}-${idx}`}>
                 <div className="partner-logo">
                   {partner.logo?.url ? (
-                    <img src={partner.logo.url} alt={partner.name} />
+                    <img src={getImageUrl(partner.logo.url)} alt={partner.name} />
                   ) : (
                     <span>🤝</span>
                   )}

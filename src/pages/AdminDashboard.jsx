@@ -6,6 +6,14 @@ import logoImg from '../assets/logo.png';
 import { subscribeToWebPush } from '../utils/webPushHelper';
 
 const AdminDashboard = () => {
+  const getImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const baseURL = apiURL.replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+    return `${baseURL}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const navigate = useNavigate();
   const location = useLocation();
   const adminName = localStorage.getItem('solvix_admin') || 'Super Admin';
@@ -47,6 +55,7 @@ const AdminDashboard = () => {
   const [partnerModal, setPartnerModal] = useState({ isOpen: false, isEdit: false, id: null, name: '', website: '', isActive: true, logoFile: null, billingPlan: 'None', billingDueDay: '' });
   const [partnerViewModal, setPartnerViewModal] = useState({ isOpen: false, partner: null, apiKey: '' });
   const [postModal, setPostModal] = useState({ isOpen: false, isEdit: false, id: null, title: '', category: 'Company News', body: '', tags: '', isPublished: false, coverFile: null });
+  const [testimonialModal, setTestimonialModal] = useState({ isOpen: false, isEdit: false, id: null, customerName: '', location: '', rating: 5, review: '', isApproved: true, photoFile: null });
 
   // --- Helper: Trigger Toast Alert ---
   const showToast = (text, type = 'success') => {
@@ -57,84 +66,110 @@ const AdminDashboard = () => {
   // --- Fetch All Data on Load ---
   const fetchAllData = async () => {
     setLoading(true);
-    
-    // Fetch Services
-    try {
-      const res = await API.get('/services');
-      if (res.data.success) setServices(res.data.data);
-    } catch (err) {
-      console.log('Error loading services.', err);
-      setServices([]);
-    }
+    const isSuperAdmin = localStorage.getItem('solvix_admin_role') === 'superadmin';
 
-    // Fetch Partners
-    try {
-      const res = await API.get('/partners');
-      if (res.data.success) setPartners(res.data.data);
-    } catch (err) {
-      console.log('Error loading partners.', err);
-      setPartners([]);
-    }
+    const fetchService = async () => {
+      try {
+        const res = await API.get('/services');
+        if (res.data.success) setServices(res.data.data);
+      } catch (err) {
+        console.log('Error loading services.', err);
+        setServices([]);
+      }
+    };
 
-    // Fetch Testimonials
-    try {
-      const res = await API.get('/testimonials');
-      if (res.data.success) setTestimonials(res.data.data);
-    } catch (err) {
-      console.log('Error loading testimonials.', err);
-      setTestimonials([]);
-    }
+    const fetchPartner = async () => {
+      try {
+        const res = await API.get('/partners');
+        if (res.data.success) setPartners(res.data.data);
+      } catch (err) {
+        console.log('Error loading partners.', err);
+        setPartners([]);
+      }
+    };
 
-    // Fetch Blog Posts
-    try {
-      const res = await API.get('/posts');
-      if (res.data.success) setPosts(res.data.data);
-    } catch (err) {
-      console.log('Error loading blog posts.', err);
-      setPosts([]);
-    }
+    const fetchTestimonial = async () => {
+      try {
+        const res = await API.get('/testimonials/all');
+        if (res.data.success) setTestimonials(res.data.data);
+      } catch (err) {
+        console.log('Error loading testimonials.', err);
+        setTestimonials([]);
+      }
+    };
 
-    // Fetch Contact Messages
-    try {
-      const res = await API.get('/contact');
-      if (res.data.success) setContacts(res.data.data);
-    } catch (err) {
-      console.log('Error loading contacts.', err);
-      setContacts([]);
-    }
+    const fetchPost = async () => {
+      try {
+        const res = await API.get('/posts');
+        if (res.data.success) setPosts(res.data.data);
+      } catch (err) {
+        console.log('Error loading blog posts.', err);
+        setPosts([]);
+      }
+    };
 
-    // Fetch Revenue / Expenses Stats
-    try {
-      const res = await API.get('/expenses/stats');
-      if (res.data.success) setRevenueStats(res.data.data);
-    } catch (err) {
-      console.log('Error loading revenue stats.', err);
-    }
+    const fetchContact = async () => {
+      try {
+        const res = await API.get('/contact');
+        if (res.data.success) setContacts(res.data.data);
+      } catch (err) {
+        console.log('Error loading contacts.', err);
+        setContacts([]);
+      }
+    };
 
-    // Fetch Superadmin data (admins and riders list)
-    if (localStorage.getItem('solvix_admin_role') === 'superadmin') {
+    const fetchStats = async () => {
+      try {
+        const res = await API.get('/expenses/stats');
+        if (res.data.success) setRevenueStats(res.data.data);
+      } catch (err) {
+        console.log('Error loading revenue stats.', err);
+      }
+    };
+
+    const fetchAdminsList = async () => {
       try {
         const res = await API.get('/auth/admins');
         if (res.data.success) setAdmins(res.data.data);
       } catch (err) {
         console.log('Error loading admins list.', err);
       }
+    };
 
+    const fetchRidersList = async () => {
       try {
         const res = await API.get('/riders');
         if (res.data.success) setRidersList(res.data.data);
       } catch (err) {
         console.log('Error loading riders list.', err);
       }
+    };
 
+    const fetchMembersList = async () => {
       try {
         const res = await API.get('/members');
         if (res.data.success) setMembers(res.data.data);
       } catch (err) {
         console.log('Error loading members list.', err);
       }
+    };
+
+    const promises = [
+      fetchService(),
+      fetchPartner(),
+      fetchTestimonial(),
+      fetchPost(),
+      fetchContact(),
+      fetchStats()
+    ];
+
+    if (isSuperAdmin) {
+      promises.push(fetchAdminsList());
+      promises.push(fetchRidersList());
+      promises.push(fetchMembersList());
     }
 
+    await Promise.all(promises);
     setLoading(false);
   };
 
@@ -465,6 +500,88 @@ const AdminDashboard = () => {
     } catch (err) {
       setTestimonials(prev => prev.filter(item => item._id !== id));
       showToast('Offline Mode: Testimonial deleted locally.', 'warning');
+    }
+  };
+
+  const handleOpenTestimonialModal = (t = null) => {
+    if (t) {
+      setTestimonialModal({
+        isOpen: true,
+        isEdit: true,
+        id: t._id,
+        customerName: t.customerName,
+        location: t.location,
+        rating: t.rating || 5,
+        review: t.review,
+        isApproved: t.isApproved,
+        photoFile: null
+      });
+    } else {
+      setTestimonialModal({
+        isOpen: true,
+        isEdit: false,
+        id: null,
+        customerName: '',
+        location: '',
+        rating: 5,
+        review: '',
+        isApproved: true,
+        photoFile: null
+      });
+    }
+  };
+
+  const handleTestimonialSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('customerName', testimonialModal.customerName);
+    formData.append('location', testimonialModal.location);
+    formData.append('rating', testimonialModal.rating);
+    formData.append('review', testimonialModal.review);
+    formData.append('isApproved', testimonialModal.isApproved);
+    if (testimonialModal.photoFile) {
+      formData.append('photo', testimonialModal.photoFile);
+    }
+
+    try {
+      let res;
+      if (testimonialModal.isEdit) {
+        res = await API.put(`/testimonials/${testimonialModal.id}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        res = await API.post('/testimonials', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      }
+
+      if (res.data.success) {
+        showToast(testimonialModal.isEdit ? 'Testimonial updated!' : 'Testimonial created successfully!');
+        fetchAllData();
+      }
+    } catch (err) {
+      console.error(err);
+      
+      const mockNewItem = {
+        _id: testimonialModal.isEdit ? testimonialModal.id : 'mock-' + Date.now(),
+        customerName: testimonialModal.customerName,
+        location: testimonialModal.location,
+        rating: Number(testimonialModal.rating),
+        review: testimonialModal.review,
+        isApproved: testimonialModal.isApproved,
+        photo: testimonialModal.photoFile ? { url: URL.createObjectURL(testimonialModal.photoFile) } : null,
+        createdAt: new Date().toISOString()
+      };
+
+      if (testimonialModal.isEdit) {
+        setTestimonials(prev => prev.map(item => item._id === testimonialModal.id ? mockNewItem : item));
+        showToast('Offline Mode: Testimonial updated locally.', 'warning');
+      } else {
+        setTestimonials(prev => [mockNewItem, ...prev]);
+        showToast('Offline Mode: Testimonial created locally.', 'warning');
+      }
+    } finally {
+      setTestimonialModal(prev => ({ ...prev, isOpen: false }));
     }
   };
 
@@ -1433,7 +1550,7 @@ const AdminDashboard = () => {
                   <td style={{ padding: '1rem' }}>
                     <div style={{ width: '45px', height: '45px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #EDF2F7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--navy)' }}>
                       {p.logo?.url ? (
-                        <img src={p.logo.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <img src={getImageUrl(p.logo.url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                       ) : p.name.slice(0, 2).toUpperCase()}
                     </div>
                   </td>
@@ -1462,7 +1579,6 @@ const AdminDashboard = () => {
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => handleOpenPartnerViewModal(p)} style={{ background: '#F1F5F9', border: 'none', color: 'var(--navy)', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>View API</button>
                       <button onClick={() => handleOpenPartnerModal(p)} style={{ background: '#EFF6FF', border: 'none', color: '#1E40AF', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
                       <button onClick={() => handleDeletePartner(p._id)} style={{ background: '#FEF2F2', border: 'none', color: '#991B1B', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
                     </div>
@@ -1480,7 +1596,12 @@ const AdminDashboard = () => {
   const renderTestimonials = () => {
     return (
       <div style={{ background: '#fff', borderRadius: '16px', padding: '1.5rem', boxShadow: 'var(--card-shadow)' }}>
-        <h3 style={{ color: 'var(--navy)', fontSize: '1.1rem', fontWeight: 800, marginBottom: '1.5rem' }}>Manage Testimonials</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <h3 style={{ color: 'var(--navy)', fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>Manage Testimonials</h3>
+          <button onClick={() => handleOpenTestimonialModal(null)} className="btn btn-orange" style={{ padding: '0.5rem 1rem', borderRadius: '8px' }}>
+            + Create New Testimonial
+          </button>
+        </div>
 
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
@@ -1497,7 +1618,18 @@ const AdminDashboard = () => {
             <tbody>
               {testimonials.map(t => (
                 <tr key={t._id} style={{ borderBottom: '1px solid #EDF2F7', verticalAlign: 'middle' }}>
-                  <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--navy)' }}>{t.customerName}</td>
+                  <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--navy)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      {t.photo?.url ? (
+                        <img src={getImageUrl(t.photo.url)} alt={t.customerName} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#475569', fontSize: '0.85rem' }}>
+                          {t.customerName ? t.customerName.charAt(0).toUpperCase() : 'C'}
+                        </div>
+                      )}
+                      <span>{t.customerName}</span>
+                    </div>
+                  </td>
                   <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>{t.location}</td>
                   <td style={{ padding: '1rem', color: '#F59E0B', fontWeight: 700 }}>{'★'.repeat(t.rating)}</td>
                   <td style={{ padding: '1rem', maxWidth: '300px', fontSize: '0.8rem', lineHeight: 1.5 }}>"{t.review}"</td>
@@ -1519,7 +1651,10 @@ const AdminDashboard = () => {
                     </button>
                   </td>
                   <td style={{ padding: '1rem' }}>
-                    <button onClick={() => handleDeleteTestimonial(t._id)} style={{ background: '#FEF2F2', border: 'none', color: '#991B1B', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => handleOpenTestimonialModal(t)} style={{ background: '#EFF6FF', border: 'none', color: '#1E40AF', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
+                      <button onClick={() => handleDeleteTestimonial(t._id)} style={{ background: '#FEF2F2', border: 'none', color: '#991B1B', padding: '0.35rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -2169,29 +2304,9 @@ const AdminDashboard = () => {
                 <input type="url" value={partnerModal.website} onChange={(e) => setPartnerModal(p => ({ ...p, website: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
               </div>
 
-              <div style={{ marginBottom: '1rem', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Billing Plan *</label>
-                  <select value={partnerModal.billingPlan} onChange={(e) => setPartnerModal(p => ({ ...p, billingPlan: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)', cursor: 'pointer' }}>
-                    <option value="None">None (Inactive for Orders)</option>
-                    <option value="Weekly">Weekly Plan</option>
-                    <option value="Monthly">Monthly Plan</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Due Day (1-31)</label>
-                  <input type="number" min="1" max="31" value={partnerModal.billingDueDay} onChange={(e) => setPartnerModal(p => ({ ...p, billingDueDay: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} placeholder="e.g. 5" />
-                </div>
-              </div>
-
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Brand Logo Image</label>
                 <input type="file" accept="image/*" onChange={(e) => setPartnerModal(p => ({ ...p, logoFile: e.target.files[0] }))} style={{ width: '100%' }} />
-              </div>
-
-              <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <input type="checkbox" id="part-active" checked={partnerModal.isActive} onChange={(e) => setPartnerModal(p => ({ ...p, isActive: e.target.checked }))} />
-                <label htmlFor="part-active" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--navy)', cursor: 'pointer' }}>Active on scrolling marquee</label>
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
@@ -2199,123 +2314,6 @@ const AdminDashboard = () => {
                 <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Changes</button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* 2b. Partner View API & Docs Modal */}
-      {partnerViewModal.isOpen && partnerViewModal.partner && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '650px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', maxHeight: '85vh', overflowY: 'auto' }}>
-            <h3 style={{ color: 'var(--navy)', fontSize: '1.25rem', fontWeight: 800, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>{partnerViewModal.partner.name} - API Keys & Docs</span>
-              <button onClick={() => setPartnerViewModal({ isOpen: false, partner: null, apiKey: '' })} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--gray-text)' }}>✕</button>
-            </h3>
-
-            {/* API Credentials */}
-            <div style={{ background: '#F8FAFC', borderRadius: '12px', padding: '1.25rem', border: '1px solid #EDF2F7', marginBottom: '1.5rem' }}>
-              <h4 style={{ color: 'var(--navy)', margin: '0 0 0.75rem 0', fontSize: '0.95rem', fontWeight: 700 }}>Integration Credentials</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-                <div><strong>Integration Type:</strong> API Integration</div>
-                <div><strong>API Key Prefix:</strong> <code>{partnerViewModal.partner.apiKeyPrefix || 'No key generated yet'}</code></div>
-                <div><strong>Webhook Endpoint URL:</strong> {partnerViewModal.partner.webhookUrl || 'Not configured'}</div>
-                <div><strong>Webhook Signature Secret:</strong> <code>{partnerViewModal.partner.webhookSecret || 'Not configured'}</code></div>
-              </div>
-
-              {/* Newly Generated API Key Warning */}
-              {partnerViewModal.apiKey && (
-                <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '8px', padding: '0.75rem', marginTop: '1rem', color: '#B45309' }}>
-                  <strong style={{ display: 'block', marginBottom: '0.25rem' }}>API Key Generated Successfully:</strong>
-                  <code style={{ fontSize: '0.95rem', fontWeight: 700, wordBreak: 'break-all', display: 'block', padding: '0.4rem', background: '#fff', borderRadius: '4px', border: '1px solid #FDE68A' }}>
-                    {partnerViewModal.apiKey}
-                  </code>
-                  <span style={{ fontSize: '0.75rem', display: 'block', marginTop: '0.4rem' }}>Copy this key now. For security reasons, it will not be displayed again.</span>
-                </div>
-              )}
-
-              <button 
-                onClick={() => handleGenerateApiKey(partnerViewModal.partner._id)}
-                style={{
-                  background: 'var(--navy)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '0.5rem 1rem',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  marginTop: '1rem'
-                }}
-              >
-                {partnerViewModal.partner.apiKeyPrefix ? 'Rotate / Re-Generate API Key' : 'Generate API Key'}
-              </button>
-            </div>
-
-            {/* API Documentation */}
-            <div style={{ borderTop: '2px solid #EDF2F7', paddingTop: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h4 style={{ color: 'var(--navy)', margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Developer API Manual</h4>
-                <button 
-                  onClick={handlePrintPartnerDocs}
-                  style={{
-                    background: '#10B981',
-                    color: '#fff',
-                    border: 'none',
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                >
-                  Download Documentation PDF
-                </button>
-              </div>
-
-              {/* Documentation Content Area */}
-              <div id="partner-api-docs-content" style={{ background: '#FAFBFD', borderRadius: '12px', padding: '1.25rem', border: '1px solid #E2E8F0', fontSize: '0.85rem', color: '#334155', maxHeight: '250px', overflowY: 'auto', lineHeight: 1.6 }}>
-                <h4>1. Authentication</h4>
-                <p>Include your secret API key in the request headers under the <code>x-api-key</code> key. Keep this key secure as it grants access to create bookings on behalf of your brand.</p>
-                <pre style={{ background: '#f1f5f9', padding: '0.75rem', borderRadius: '6px', overflowX: 'auto', fontSize: '0.75rem' }}>
-{`Headers:
-{
-  "Content-Type": "application/json",
-  "x-api-key": "svgo_xxxxxxxxxxxxxxxxxxxxxxxx"
-}`}
-                </pre>
-
-                <h4>2. Create Order</h4>
-                <p>Submit a <code>POST</code> request to the bookings endpoint to instantiate a delivery. The delivery charges are calculated based on the distance zone provided.</p>
-                <p><strong>Endpoint:</strong> <code>POST https://api.solvixgo.com/api/v1/partner/orders</code></p>
-                <pre style={{ background: '#f1f5f9', padding: '0.75rem', borderRadius: '6px', overflowX: 'auto', fontSize: '0.75rem' }}>
-{`Request Body:
-{
-  "customerName": "Fatima Bello",
-  "customerPhone": "+2347079018011",
-  "receiverPhone": "+2348039918012",
-  "pickupAddress": "Solvix Plaza Gombe",
-  "dropoffAddress": "Federal Lowcost Estate Gombe",
-  "itemDescription": "Cloth Package / Hampers",
-  "distanceZone": "Short",
-  "notes": "Fragile items. Handle with care."
-}`}
-                </pre>
-
-                <h4>3. Distance Zones & Billing Plans</h4>
-                <ul>
-                  <li><strong>Short Zone:</strong> ₦500</li>
-                  <li><strong>Medium Zone:</strong> ₦700</li>
-                  <li><strong>Long Zone:</strong> ₦1,000</li>
-                </ul>
-                <p>All successfully completed bookings are aggregated to your active billing cycle (<strong>{partnerViewModal.partner.billingPlan} plan</strong>) and invoiced periodically on your due day.</p>
-
-                <h4>4. Webhook In Transit Notification</h4>
-                <p>When the rider transitions the order to "In Transit", a secure webhook payload is sent to your Webhook URL with signature verification using your signature secret.</p>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -2457,6 +2455,60 @@ const AdminDashboard = () => {
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setMemberModal(p => ({ ...p, isOpen: false }))} style={{ background: '#F1F5F9', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Profile</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Testimonial CRUD Form Modal */}
+      {testimonialModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '500px', padding: '2rem', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ color: 'var(--navy)', fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.5rem' }}>
+              {testimonialModal.isEdit ? 'Edit Testimonial Details' : 'Create New Testimonial'}
+            </h3>
+            
+            <form onSubmit={handleTestimonialSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Customer Name *</label>
+                <input type="text" required value={testimonialModal.customerName} onChange={(e) => setTestimonialModal(p => ({ ...p, customerName: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Location *</label>
+                <input type="text" required placeholder="e.g. Tudun Wada, Gombe" value={testimonialModal.location} onChange={(e) => setTestimonialModal(p => ({ ...p, location: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Rating *</label>
+                <select value={testimonialModal.rating} onChange={(e) => setTestimonialModal(p => ({ ...p, rating: Number(e.target.value) }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)', cursor: 'pointer', fontWeight: 600 }}>
+                  <option value={5}>★★★★★ (5 Stars)</option>
+                  <option value={4}>★★★★☆ (4 Stars)</option>
+                  <option value={3}>★★★☆☆ (3 Stars)</option>
+                  <option value={2}>★★☆☆☆ (2 Stars)</option>
+                  <option value={1}>★☆☆☆☆ (1 Star)</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Review / Feedback *</label>
+                <textarea required rows="4" placeholder="What did the customer say about Solvix Go?" value={testimonialModal.review} onChange={(e) => setTestimonialModal(p => ({ ...p, review: e.target.value }))} style={{ width: '100%', padding: '0.65rem 1rem', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontFamily: 'var(--font)' }} />
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--navy)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Customer Photo (Optional)</label>
+                <input type="file" accept="image/*" onChange={(e) => setTestimonialModal(p => ({ ...p, photoFile: e.target.files[0] }))} style={{ width: '100%' }} />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input type="checkbox" id="testi-approved" checked={testimonialModal.isApproved} onChange={(e) => setTestimonialModal(p => ({ ...p, isApproved: e.target.checked }))} />
+                <label htmlFor="testi-approved" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--navy)', cursor: 'pointer' }}>Approved / Publicly Visible</label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setTestimonialModal(p => ({ ...p, isOpen: false }))} style={{ background: '#F1F5F9', border: 'none', padding: '0.6rem 1.25rem', borderRadius: '8px', color: 'var(--navy)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" className="btn btn-orange" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px' }}>Save Testimonial</button>
               </div>
             </form>
           </div>
